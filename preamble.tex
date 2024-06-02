@@ -1,0 +1,97 @@
+% This template file contains packages and commands that are useful and generic
+% across papers.
+%
+% When adding new commands, you can most likely do that within paper.tex, but
+% when adding new packages, you might need to update that here to ensure the
+% packages are included in the proper order (a common source of compilation
+% errors with LaTeX).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages {{{
+
+\usepackage{color}
+\ifieeeformat
+\usepackage[dvipsnames]{xcolor} % IEEE needs this; ACM doesn't
+\usepackage{totpages} % IEEE needs this; ACM doesn't
+\fi
+\usepackage{graphicx}
+\usepackage[labelformat=simple]{subcaption}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{makecell} % Not sure if we need this
+\ifieeeformat \else
+\usepackage{enumitem} % Not sure if we need this
+\fi
+\usepackage[ruled,vlined]{algorithm2e}
+
+\usepackage{ulem}
+\normalem
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Commands {{{
+
+\newcommand{\etal}{et~al.\xspace}
+
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\renewcommand\thesubfigure{(\alph{subfigure}) }
+
+\newcommand{\parhead}[1]{\medskip \noindent \textbf{#1}\hskip .1in}
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Environments {{{
+
+\newenvironment{strategy}[1][htb]
+  {\renewcommand{\algorithmcfname}{Strategy}
+   \begin{algorithm}[#1]%
+  }{
+   \end{algorithm}
+   }
+  
+\newenvironment{tightlist}{
+	\begin{list}{$\bullet$} {
+		\setlength{\itemsep}{0.00cm}
+		\setlength{\parskip}{-0.1cm} 
+	}}{\end{list}}
+
+\newenvironment{widelist}{
+	\begin{list}{$\bullet$} {
+		\setlength{\leftmargin}{.70cm}
+		\setlength{\itemsep}{.00cm}
+	}}{\end{list}}
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Comment Commands {{{
+
+\ifdefined\isFinalized
+\newcommand{\NewCommentType}[3]{}
+\else
+\newcommand{\NewCommentType}[3]{\expandafter\newcommand\csname #1\endcsname[1]{{\color{#2}{#3: ##1}} }}
+\fi
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Line-break nudging {{{
+
+\clubpenalty=10000 
+\widowpenalty = 10000 
+
+\hyphenation{de-a-non-y-mi-za-tion}
+\hyphenation{none-the-less}
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Prettier fonts {{{
+
+\ifieeeformat \else
+\urlstyle{tt}
+\fi
+
+\usepackage[override]{cmtt} % make tt font tighter / less ugly
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

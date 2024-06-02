@@ -1,0 +1,42 @@
+% TODO fill in your paper title
+\newcommand{\PaperTitle}{Paper Title}
+% TODO fill in your paper number when you get it
+\newcommand{\PaperNumber}{XXX}
+
+% TODO specify your conference (ccs, imc, oakland, sigcomm, etc.)
+\documentclass[usenix]{paper}
+
+\input{preamble}
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Paper-specific commands {{{
+
+% System name (if applicable)
+\newcommand{\name}{$\mathsf{SystemName}$\xspace} % middle of sentence
+\newcommand{\Name}{$\mathsf{SystemName}$\xspace} % start of sentence
+
+% Per-author comment commands (they don't appear if you "make finalized")
+% 	Colors: black, blue, brown, cyan, darkgray, gray, green, lightgray, lime
+% 	magenta, olive, orange, pink, purple, red, teal, violet, white,	yellow
+\NewCommentType{todo}{red}{TODO}
+\NewCommentType{dml}{violet}{dml}
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Abstract{abstract}
+
+% \input{intro}
+% \input{background}
+% \input{related}
+% \input{methodology}
+% \input{results}
+% \input{conclusion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\bibliographystyle{plain}
+\bibliography{conferences,refs}
+
+\end{document}
