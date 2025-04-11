@@ -1,0 +1,28 @@
+\section{Related Work}
+\label{sec:related}
+
+Several smartphone applications have been developed to attempt to detect rogue
+base stations. Park~\etal evaluated five popular IMSI catcher
+applications---\emph{SnoopSnitch}~\cite{snoopsnitch}, \emph{Cell Spy Catcher},
+\emph{GSM Spy Finder}, \emph{Darshak}~\cite{darshak}, and the \emph{Android IMSI
+Catcher Detector (AIMSICD)}~\cite{AIMSICD},---for Android in order to evaluate
+their efficacy against rogue base stations using a rogue base station framework
+they developed called \emph{White-Stingray}~\cite{whitestingray}. Since this
+work was published in 2017, several of these applications are no longer
+available in the Google Play Store. 
+
+More recently, Arnold~\etal, developed \emph{CellGuard}, an iOS application for
+analyzing nearby cellular networks to detect possible rogue base
+stations~\cite{cellguard}. \emph{CellGuard} uses several factors, including
+whether or not a base station is present in Apple's \cps, to make this
+determination. Unlike their work, which focuses on detecting a local adversary
+in real time, this work seeks to map the world's cellular infrastructure and
+detect malicious and suspicious rogue base stations longitudinally across time
+and space.  
+
+Most closely related to this work is Rye and Levin's investigation of the
+security and privacy vulnerabilities associated with Apple's
+\ac{WPS}~\cite{rye2024surveilling}. The authors demonstrated that an
+unprivileged attacker can amass hundreds of millions of \wifi \ac{BSSID}
+geolocations by querying Apple's \ac{WPS} with little \emph{a priori} knowledge.
+In this work, we 
