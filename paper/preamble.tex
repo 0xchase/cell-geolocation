@@ -23,6 +23,10 @@
 \usepackage{enumitem} % Not sure if we need this
 \fi
 \usepackage[ruled,vlined]{algorithm2e}
+\usepackage[nolist,nohyperlinks]{acronym}
+
+\acrodefplural{CPS}[CPSes]{Cellular Positioning Systems}
+\acrodefplural{WPS}[WPSes]{Wi-Fi Positioning Systems}
 
 \usepackage{ulem}
 \normalem
@@ -32,6 +36,10 @@
 % Commands {{{
 
 \newcommand{\etal}{et~al.\xspace}
+
+\newcommand{\cps}{\ac{CPS}\xspace}
+\newcommand{\wps}{\ac{WPS}\xspace}
+\newcommand{\wifi}{Wi-Fi\xspace}
 
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
