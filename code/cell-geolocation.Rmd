@@ -7,24 +7,99 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_knit$set(root.dir = '/home/erik/repos/gigaryte/umd/cell-geolocation/data')
+knitr::opts_knit$set(root.dir = '/Users/rye/repos/cell-geolocation/data')
+ticksize <- 12
+axissize <- 14
+
+require(ggplot2)
+library(jsonlite)
 ```
 
-## R Markdown
+bootstrap testing non-CN API endpoint
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+data <- read.csv('non-cn-bootstrap.csv', header = TRUE)
 
-```{r cars}
-summary(cars)
+# Name the columns
+colnames(data) <- c("Generation", "round", "count")
+
+# Make sure round and count are numeric
+data$round <- as.numeric(data$round)
+data$count <- as.numeric(data$count)
+
+scale_y_continuous(labels = scales::label_comma())
+
+
+# Plot
+ggplot(data, aes(x = round, y = count, color = Generation)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(title = "Count over Rounds by Tech",
+       x = "Round",
+       y = "Count") +
+  theme_minimal()
+
+```
+bootstrapping CN API endpoint
+
+```{r}
+
+data <- read.csv('cn-bootstrap.csv', header = TRUE)
+
+# Name the columns
+colnames(data) <- c("Generation", "round", "count")
+
+# Make sure round and count are numeric
+data$round <- as.numeric(data$round)
+data$count <- as.numeric(data$count)
+
+scale_y_continuous(labels = scales::label_comma())
+
+
+# Plot
+ggplot(data, aes(x = round, y = count, color = Generation)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(x = "Round",
+       y = "Base Station") +
+  theme_minimal()
+
 ```
 
-## Including Plots
+# protocol counts by day
 
-You can also embed plots, for example:
+```{r}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Helper to load a file and add a generation label
+read_with_generation <- function(filename, generation_label) {
+  df <- read.csv(filename, header = FALSE, col.names = c("Count", "Date"))
+  df$Date <- as.Date(df$Date)
+  df$Count <- as.numeric(df$Count)
+  df$Generation <- generation_label
+  return(df)
+}
+
+# Read and label each file
+df1 <- read_with_generation("all-by-day.csv", "All")
+df2 <- read_with_generation("nr-by-day.csv", "NR")
+df3 <- read_with_generation("lte-by-day.csv", "LTE")
+df4 <- read_with_generation("gsm-by-day.csv", "GSM/UMTS")
+
+# Combine all into one data.frame
+all_data <- rbind(df1, df2, df3, df4)
+
+scale_y_continuous(labels = scales::label_comma())
+
+
+# Plot
+ggplot(all_data, aes(x = Date, y = Count, color=Generation)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(x = "Date",
+       y = "Base Stations") +
+  theme_minimal()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
