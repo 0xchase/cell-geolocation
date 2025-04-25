@@ -1,16 +1,69 @@
 \section{Background}
 \label{sec:background}
 
+In this section, we describe systems that enable mobile devices to determine
+their own position using nearby wireless infrastructure. Then, we define and
+describe the identifiers used by one type of these systems.
+
 \subsection{Positioning Systems}
 \label{sec:positioning}
 
 \emph{Wireless positioning systems} are used by mobile operating systems to
 compute their own locations. These systems use landmarks---either \wifi \acp{AP}
 or cellular base stations---with known locations to provide devices attempting
-to self-geolocate with reference points to do so. Devices using \acp{WPS} use
+to self-geolocate with reference points to do so. \acp{WPS} use
 \acp{BSSID}---MAC addresses of \wifi \acp{AP}---that are broadcast in 802.11
-\wifi management frames to identify nearby landmarks, while those using
-\acp{CPS} use cellular base station identifiers 
+\wifi management frames to identify nearby landmarks, while \acp{CPS} use
+identifiers broadcast by cellular base stations to identify these landmarks.
 
-\subsection{Base Station Identifiers} 
+While prior work~\cite{rye2024surveilling, han2022location,
+tippenhauer2009attacks} examined the operation and privacy issues associated
+with \acp{WPS}, we exclusively study the operation and privacy issues related to
+\acp{CPS} in this work.
+
+\subsection{Cellular Infrastructure Identifiers} 
 \label{sec:bsids}
+
+To advertise service for a cellular network, cellular \acp{BTS} advertise
+identifiers over the air to clients within transmission range. These identifiers
+indicate which \ac{MNO} the \ac{BTS} access to via the
+\ac{PLMN} which consists of an \ac{ITU}-assigned \ac{MCC} and a
+nationally-administered \ac{MNC}. Cellular infrastructure identifiers also
+indicate a geographic area and unique identity of the \ac{BTS} or \ac{BTS}
+sector. These two fields are assigned by \acp{MNO} to their cellular
+infrastructure in a manner of their choosing.  When taken together, these four
+values should uniquely identify a specific cell for a \ac{MNO}.
+
+The name and size of the two fields assigned by an \ac{MNO} vary according to
+the technology generation of the infrastructure they describe. For instance, in
+\ac{GSM} (2G) and \ac{UMTS} (3G) networks, a \emph{Cell Global Identity (CGI)}
+consists of a PLMN, a 16-bit regional identity called the \ac{LAC}, and a 16-bit
+\ac{CID}. In \ac{LTE} (4G), an \emph{\ac{ECGI}} consists of a PLMN, a 20-bit
+eNodeB ID, and an 8-bit \ac{CID}. In \ac{NR} (5G) networks, an \emph{\ac{NCGI}}
+uniquely describes a cell, consisting of a PLMN, a 28-bit gNodeB ID, and an
+8-bit \ac{CID}. Table~\ref{tab:cellids} summarizes the types of cellular
+infrastructure identifiers and their sizes by technology generation.
+
+\begin{table*}[h]
+\caption{Summary of cellular network identifiers by cellular technology generation.}
+\label{tab:cellids}
+\begin{tabular}{c|c|c|c|c|c}
+\textbf{Technology} & \textbf{Generation} & \textbf{Unique Identifier}       &
+    \textbf{Network Identifier} & \textbf{Location Identifier} & \textbf{Cell Identifier} \\
+\hline
+GSM                 & 2G                  & Cell Global Identity             & PLMN (5-6 digits)           & LAC (16 bits)                & Cell ID (16 bits)        \\
+UMTS                & 3G                  & Cell Global Identity             & PLMN (5-6 digits)           & LAC (16 bits)                & Cell ID (16 bits)        \\
+LTE                 & 4G                  & E-UTRAN Cell Global Identifier   & PLMN (5-6 digits)           & eNodeB ID (20 bits)          & Cell ID (8 bits)         \\
+NR                  & 5G                  & New Radio Cell Global Identifier & PLMN (5-6 digits)           & gNodeB ID (28 bits)          & Cell ID (8 bits)        
+\end{tabular}
+\end{table*} 
+
+In this work, we amass a global corpus of infrastructure identifiers across 2-5G
+cellular technologies using Apple's \ac{CPS}. Because we are concerned with
+identifying, geolocating, and longitudinally tracking these identifiers via a
+\ac{CPS}, rather than transmitting or receiving these identifiers with our own
+hardware, we are able to disregard many of the nuances in naming and bit-size
+between technology generations. In this work, when the distinction between the
+identifier used to specify a cell's location area or region is immaterial, we
+refer to this identifier as a \ac{LAC}. We refer to the cell identifier,
+irrespective of generation and bit-length, as the \ac{CID} throughout this work. 

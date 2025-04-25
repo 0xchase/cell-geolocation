@@ -1,10 +1,26 @@
 \section{Results}
 \label{sec:results}
 
+Using the cell identifier collection methodology outlined in
+\S\ref{sec:methodology}, we accumulated over 87M unique cell identifiers by
+querying Apple's \ac{CPS}. Figure~\ref{fig:cumulative-tech} depicts the
+cumulative number of cellular identifiers discovered over time. 
+
+% {{ Number of cells geolocated by technology
+
+\begin{figure}[t]
+\centering
+    \includegraphics[width=\linewidth]{cumulative-tech.pdf}
+    \caption{Cumulative number of geolocated cells over time, geolocated
+    querying Apple's \ac{CPS}.}
+    \label{fig:cumulative-tech}
+\end{figure}
+
+%}}
 
 \begin{table}[t]
     \centering
-    \caption{Base station counts by cellular technology.}
+    \caption{Collected cellular identifier counts by cellular technology.}
     \label{tab:generation-counts}
     \begin{tabular}{c|r}
     \textbf{Technology} & \multicolumn{1}{|c}{\textbf{Count}} \\
