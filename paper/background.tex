@@ -86,10 +86,12 @@ it to be used as a landmark, and they report cellular infrastructure for
 In the \emph{CPS geolocation} phase, a device in Apple's ecosystem uses these
 previously-collected cellular landmarks for geolocation. For an Apple device to
 obtain its location using the \ac{CPS}, it samples the cellular frequency bands
-for nearby identifiers, and queries a specific Apple API endpoint for this
+for nearby identifiers, and queries a specific Apple HTTPS API endpoint for this
 purpose. Apple, if it has entries for the cellular identifiers requested by the
 client in its database, will return the geolocations of those landmarks. Then,
 using the received signals strengths from those nearby cellular landmarks, the
-Apple device can estimate its own position. However, like Apple's \ac{WPS},
-Apple's \ac{CPS} returns up to \textcolor{red}{how many??} additional
-unrequested landmarks \emph{near} the landmarks that were requested. 
+Apple device can estimate its own position. Like Apple's \ac{WPS}, Apple's
+\ac{CPS} also returns additional, unrequested information.  Apple's \ac{CPS}
+provides up to 100 additional geolocated cells \emph{nearby} one that was
+requested, presumably to provide as many useful landmarks to the requesting
+client as possible.
