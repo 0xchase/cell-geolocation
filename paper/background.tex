@@ -96,3 +96,12 @@ Apple device can estimate its own position. Like Apple's \ac{WPS}, Apple's
 provides up to 100 additional geolocated cells \emph{nearby} one that was
 requested, presumably to provide as many useful landmarks to the requesting
 client as possible.
+
+Apple's \ac{CPS} differentiates between \acp{BTS} for different cellular
+technologies by placing them in different locations in the request and response
+messages. Prior work~\cite{cellguard,isniff} identified that the \ac{CPS}
+differentiates between NR (5G), LTE (4G), and a combined GSM (2G) and UMTS (3G).
+It also handles \acp{BTS} for \ac{CDMA}, \ac{CDMA} \ac{EV-DO}, and \ac{SCDMA}.
+We use this knowledge to conduct the first global, large-scale survey of
+cellular \acp{BTS}, as well as examine the security and privacy ramifications of
+an adversary having the ability to accumulate this data.

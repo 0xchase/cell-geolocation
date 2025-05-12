@@ -18,11 +18,17 @@ whether or not a base station is present in Apple's \cps, to make this
 determination. Unlike their work, which focuses on detecting a local adversary
 in real time, this work seeks to map the world's cellular infrastructure and
 detect malicious and suspicious rogue base stations longitudinally across time
-and space.  
+and space. We leverage their reverse-engineering of Apple's \ac{CPS} request and
+response formats to conduct our study.
 
 Most closely related to this work is Rye and Levin's investigation of the
 security and privacy vulnerabilities associated with Apple's
 \ac{WPS}~\cite{rye2024surveilling}. The authors demonstrated that an
 unprivileged attacker can amass hundreds of millions of \wifi \ac{BSSID}
 geolocations by querying Apple's \ac{WPS} with little \emph{a priori} knowledge.
-In this work, we 
+We examine many of the questions, but applied to cellular infrastructure: how
+might one remotely discover cellular \acp{BTS} around the world using Apple's
+\ac{CPS}? Are there any security and privacy ramifications of providing free,
+unlimited access to an API that provides such information? 
+
+
