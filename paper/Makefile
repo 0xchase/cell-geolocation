@@ -12,11 +12,26 @@ TEX_ALL := $(shell search=$(TARGET).tex; all=; \
 				all="$$all $$abs"; \
 				echo "$$all")
 
+# Figures written with an explicit graphics extension are files on disk rather
+# than something make builds, but they still have to be prerequisites -- without
+# this, regenerating a figure never triggers a rebuild of the paper. Bare names
+# resolve against \graphicspath, which preamble.tex sets to ./figs/.
+STATIC_FIGURES := $(shell for t in $(TEX_ALL); do \
+				cat $$t | \
+				egrep '^[^%]*\\includegraphics' | \
+				sed -En 's/.*includegraphics(\[.+\])?\{([^\{]*)\}.*/\2/p' | \
+				grep -E '\.(pdf|png|jpg|jpeg|eps)$$'; \
+				done | sort -u | while read -r f; do \
+					if [ -f "$$f" ]; then echo "$$f"; \
+					elif [ -f "figs/$$f" ]; then echo "figs/$$f"; fi; \
+				done)
+
+# Everything else is built from plots/%.plot by the pattern rules further down.
 FIGURES := $(shell for t in $(TEX_ALL); do \
 				cat $$t | \
 				egrep '^[^%]*\\includegraphics' | \
 				sed -En 's/.*includegraphics(\[.+\])?\{([^\{]*)\}.*/\2/p' | \
-				grep -E -v '\.pdf$$'; \
+				grep -E -v '\.(pdf|png|jpg|jpeg|eps)$$'; \
 				done)
 
 all: $(TARGET).pdf
@@ -50,7 +65,7 @@ all: $(TARGET).pdf
 figs/%.eps: plots/%.plot
 	gnuplot $< > $@
 
-$(TARGET).pdf: $(addsuffix .eps, $(FIGURES))  $(TEX_ALL)
+$(TARGET).pdf: $(addsuffix .eps, $(FIGURES)) $(STATIC_FIGURES) $(TEX_ALL)
 	pdflatex $(TARGET).tex
 	bibtex $(TARGET)
 	pdflatex $(TARGET).tex

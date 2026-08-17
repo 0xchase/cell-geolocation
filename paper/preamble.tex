@@ -97,6 +97,26 @@
 
 % }}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Float pages {{{
+%
+% A float too tall to share a page with text gets a "float page" of its own.
+% LaTeX centres it vertically there, because \@fptop and \@fpbot both carry
+% 1fil of stretch -- which leaves a full-width figure stranded in the middle of
+% an otherwise empty page. Dropping the stretch from the top pins float pages
+% to the top margin and lets the slack fall to the bottom. The \@dbl... lengths
+% are the two-column (figure*) equivalents.
+
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{8pt plus 1fil}
+\setlength{\@fpbot}{0pt plus 1fil}
+\setlength{\@dblfptop}{0pt}
+\setlength{\@dblfpsep}{8pt plus 1fil}
+\setlength{\@dblfpbot}{0pt plus 1fil}
+\makeatother
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Prettier fonts {{{
 
 \ifieeeformat \else

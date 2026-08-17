@@ -12,4 +12,77 @@ stations assigned one of these MCCs.
 
 \subsection{Out-of-Country \acp{MCC}}
 
+
+
+\begin{figure*}[t]
+\centering
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{cc}
+\small\textbf{(a) Fixed position (11{,}755)} &
+\small\textbf{(b) Distinct cells per month (log scale)} \\
+\includegraphics[width=0.23\linewidth]{gaza_foreign_static.png} &
+\includegraphics[width=0.73\linewidth]{gaza_foreign_timeline.pdf} \\
+\end{tabular}
+
+\smallskip
+\begin{tabular}{cccc}
+\multicolumn{4}{c}{\small\textbf{(c) Relocated $>$1\,km, by year}} \\
+\small 2023 (Nov--Dec) & \small 2024 & \small 2025 & \small 2026 (Jan--Jun) \\
+\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2023.png} &
+\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2024.png} &
+\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2025.png} &
+\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2026.png} \\
+\scriptsize 215 cells & \scriptsize 4{,}219 cells & \scriptsize 3{,}637 cells & \scriptsize 2{,}173 cells \\
+\end{tabular}
+
+{\scriptsize Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
+    \caption{Foreign network identities in the Gaza Strip cluster at its
+    southern end and are confined to 2024, while Palestinian, Israeli and
+    Egyptian identities persist throughout.}
+    \label{fig:gaza-foreign-identities}
+\end{figure*}
+
 \subsection{Moving Base Stations}
+
+\begin{figure*}[t]
+\centering
+\setlength{\tabcolsep}{1pt}
+\renewcommand{\arraystretch}{1.0}
+\begin{tabular}{ccc}
+\small\textbf{2024} & \small\textbf{2025} & \small\textbf{2026 (Jan--Jun)} \\
+\shortstack{%
+\includegraphics[width=0.327\linewidth]{ukraine_progression_2024.png}%
+\\[-1pt] \scriptsize 30{,}628 RU \textbar{} 234{,}113 UA \textbar{} 0 D2C} &
+\shortstack{%
+\includegraphics[width=0.327\linewidth]{ukraine_progression_2025.png}%
+\\[-1pt] \scriptsize 79{,}931 RU \textbar{} 252{,}537 UA \textbar{} 6{,}570 D2C} &
+\shortstack{%
+\includegraphics[width=0.327\linewidth]{ukraine_progression_2026.png}%
+\\[-1pt] \scriptsize 58{,}002 RU \textbar{} 177{,}378 UA \textbar{} 63{,}270 D2C} \\
+\end{tabular}
+
+\smallskip
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{r@{\hspace{3pt}}l}
+\scriptsize Russian terrestrial (MCC 250) &
+\includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_ru.png}%
+\\
+\scriptsize Ukrainian terrestrial (MCC 255) &
+\includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_ua.png}%
+\\
+\scriptsize Kyivstar Direct-to-Cell (255-707) &
+\includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_sat.png}%
+\\
+& \makebox[0.3\linewidth][l]{\hspace*{0.0000\linewidth}\makebox[0pt][c]{\scriptsize ${10}^{0}$}\hspace*{0.1304\linewidth}\makebox[0pt][c]{\scriptsize ${10}^{1}$}\hspace*{0.1304\linewidth}\makebox[0pt][c]{\scriptsize ${10}^{2}$}}
+\end{tabular}%
+}
+\par\vspace{2pt}
+{\scriptsize Distinct cells per 1\,km square bin (log scale, shared by all three networks and all 3 panels); each bin takes the hue of whichever network has the most cells in it.\quad\rule[0.15em]{1.4em}{1pt}~Documented front}
+
+{\scriptsize Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
+
+    \caption{Density of distinct Russian, Ukrainian and Kyivstar
+    Direct-to-Cell satellite cells across Ukraine, by year, on one
+    shared scale, against the documented front.}
+    \label{fig:ukraine-progression}
+\end{figure*}
