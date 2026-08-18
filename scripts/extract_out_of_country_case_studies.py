@@ -14,10 +14,13 @@ figure inspectable under ``data/out-of-country/``.
 from __future__ import annotations
 
 import argparse
+import csv
+import json
 import os
 import shlex
 import subprocess
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +35,7 @@ SYRIA_BBOX = (35.50, 42.50, 35.00, 37.40)
 WEST_BANK_BBOX = (34.82, 35.62, 31.30, 32.62)
 GAZA_BBOX = (34.20, 34.60, 31.20, 31.60)
 JORDAN_BBOX = (34.80, 36.20, 29.10, 33.00)
+GOLAN_BBOX = (35.55, 36.15, 32.70, 33.45)
 
 # Approximately square cells at each map's midpoint latitude.
 SYRIA_DLAT, SYRIA_DLON = 0.03604, 0.04465   # about 4 km
@@ -40,6 +44,10 @@ SYRIA_FULL_DLAT, SYRIA_FULL_DLON = 0.004505, 0.00558  # about 500 m
 WB_FULL_DLAT, WB_FULL_DLON = 0.0022525, 0.00265       # about 250 m
 GAZA_FULL_DLAT, GAZA_FULL_DLON = 0.00112625, 0.001325  # about 125 m
 JORDAN_FULL_DLAT, JORDAN_FULL_DLON = 0.0022525, 0.00265  # about 250 m
+GOLAN_FULL_DLAT, GOLAN_FULL_DLON = 0.001802, 0.00215    # about 200 m
+
+GOLAN_ALPHA_RELATION = 13574165
+GOLAN_BRAVO_WAYS = (231315570, 1194778774)
 
 
 def run_csv(name: str, sql: str, output: Path, *, skip_existing: bool = False) -> None:
@@ -369,6 +377,114 @@ def extract_jordan(root: Path, *, skip_existing: bool = False) -> None:
     )
 
 
+def extract_golan(root: Path, *, skip_existing: bool = False) -> None:
+    # Unlike the country-resolved Levant panels, this crop deliberately spans
+    # both sides of the UNDOF separation area. Restricting country_iso would
+    # erase precisely the cross-line distribution the figure is intended to
+    # expose, so the population is defined only by position and MCC.
+    identity_filter = "mcc IN (417,425)"
+    groups = [
+        ("syrian_cells", "g.mcc=417"),
+        ("israeli_cells", "g.mcc=425"),
+    ]
+    run_csv(
+        "Golan Heights collection-wide latest-position 200 m grid",
+        latest_map_query(
+            GOLAN_BBOX, GOLAN_FULL_DLAT, GOLAN_FULL_DLON,
+            identity_filter, groups,
+        ),
+        root / "golan-heights-grid.csv",
+        skip_existing=skip_existing,
+    )
+    extract_golan_reference_lines(root / "golan-undof-lines.csv", skip_existing=skip_existing)
+
+
+def _osm_json(url: str) -> dict:
+    req = Request(url, headers={"User-Agent": "cell-geolocation-paper/0.1 (research plotting)"})
+    with urlopen(req, timeout=60) as response:
+        return json.load(response)
+
+
+def _way_sequences(payload: dict, way_ids: list[int]) -> list[list[tuple[int, float, float]]]:
+    nodes = {
+        int(element["id"]): (float(element["lon"]), float(element["lat"]))
+        for element in payload["elements"] if element["type"] == "node"
+    }
+    ways = {int(element["id"]): element for element in payload["elements"] if element["type"] == "way"}
+    return [
+        [(int(node), *nodes[int(node)]) for node in ways[way_id]["nodes"]]
+        for way_id in way_ids
+    ]
+
+
+def _chain_segments(segments: list[list[tuple[int, float, float]]]) -> list[tuple[int, float, float]]:
+    """Join OSM ways by shared endpoint while retaining every source vertex."""
+    remaining = [segment[:] for segment in segments]
+    chain = remaining.pop(0)
+    while remaining:
+        for index, segment in enumerate(remaining):
+            if chain[-1][0] == segment[0][0]:
+                chain.extend(segment[1:])
+            elif chain[-1][0] == segment[-1][0]:
+                chain.extend(reversed(segment[:-1]))
+            elif chain[0][0] == segment[-1][0]:
+                chain = segment[:-1] + chain
+            elif chain[0][0] == segment[0][0]:
+                chain = list(reversed(segment[1:])) + chain
+            else:
+                continue
+            remaining.pop(index)
+            break
+        else:
+            raise RuntimeError("could not chain OSM boundary segments")
+    return chain
+
+
+def extract_golan_reference_lines(output: Path, *, skip_existing: bool = False) -> None:
+    """Export the Alpha and Bravo lines used by the Golan map.
+
+    OSM supplies the vector geometry. The line identities and interpretation
+    are cross-checked against UN map 2916 Rev. 137 (May 2025).
+    """
+    if skip_existing and output.exists():
+        print(f"[skip] {output.relative_to(ROOT)}", flush=True)
+        return
+    print(f"[query] Golan Alpha/Bravo reference lines -> {output.relative_to(ROOT)}", flush=True)
+
+    alpha_url = (
+        "https://api.openstreetmap.org/api/0.6/relation/"
+        f"{GOLAN_ALPHA_RELATION}/full.json"
+    )
+    alpha_payload = _osm_json(alpha_url)
+    relation = next(
+        element for element in alpha_payload["elements"]
+        if element["type"] == "relation" and int(element["id"]) == GOLAN_ALPHA_RELATION
+    )
+    alpha_ids = [
+        int(member["ref"]) for member in relation["members"] if member["type"] == "way"
+    ]
+    alpha = _chain_segments(_way_sequences(alpha_payload, alpha_ids))
+
+    bravo_segments = []
+    for way_id in GOLAN_BRAVO_WAYS:
+        url = f"https://api.openstreetmap.org/api/0.6/way/{way_id}/full.json"
+        payload = _osm_json(url)
+        bravo_segments.extend(_way_sequences(payload, [way_id]))
+    bravo = _chain_segments(bravo_segments)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    tmp = output.with_suffix(output.suffix + ".tmp")
+    with tmp.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["line", "seq", "lon", "lat", "source"])
+        source = "OpenStreetMap; cross-checked with UN map 2916 Rev. 137 (May 2025)"
+        for line, points in (("Alpha", alpha), ("Bravo", bravo)):
+            for seq, (_node, lon, lat) in enumerate(points):
+                writer.writerow([line, seq, f"{lon:.7f}", f"{lat:.7f}", source])
+    tmp.replace(output)
+    print(f"[data] {len(alpha) + len(bravo):,} line vertices", flush=True)
+
+
 def extract_aliasing(root: Path, *, skip_existing: bool = False) -> None:
     alias = root / "aliasing"
     selected = {
@@ -428,7 +544,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument(
-        "--case", choices=("all", "syria", "west-bank", "gaza", "jordan", "aliasing"), default="all"
+        "--case", choices=("all", "syria", "west-bank", "gaza", "jordan", "golan", "aliasing"), default="all"
     )
     parser.add_argument(
         "--skip-existing", action="store_true",
@@ -444,6 +560,8 @@ def main() -> None:
         extract_gaza(args.output, skip_existing=args.skip_existing)
     if args.case in ("all", "jordan"):
         extract_jordan(args.output, skip_existing=args.skip_existing)
+    if args.case in ("all", "golan"):
+        extract_golan(args.output, skip_existing=args.skip_existing)
     if args.case in ("all", "aliasing"):
         extract_aliasing(args.output, skip_existing=args.skip_existing)
 

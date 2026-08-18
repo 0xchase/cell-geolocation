@@ -37,7 +37,7 @@ MAP_UNITS = ROOT / "data" / "reference" / "ne_10m_admin_0_map_units.geojson"
 SYRIA_BBOX = (35.50, 42.50, 35.00, 37.40)
 WEST_BANK_BBOX = (34.82, 35.62, 31.30, 32.62)
 GAZA_BBOX = (34.20, 34.60, 31.20, 31.60)
-JORDAN_BBOX = (34.80, 36.20, 29.10, 33.00)
+GOLAN_BBOX = (35.55, 36.15, 32.70, 33.45)
 
 SYRIA_GROUPS = [
     ("syrian_cells", "Syrian (417)", "#0072B2"),
@@ -64,11 +64,10 @@ GAZA_GROUPS = [
     ("emirati_cells", "Emirati (424)", "#F0E442"),
     ("other_country_cells", "Other country MCC", "#666666"),
 ]
-JORDAN_GROUPS = [
-    ("jordanian_cells", "Jordanian (416)", "#0072B2"),
-    ("israeli_cells", "Israeli (425)", "#D55E00"),
+GOLAN_GROUPS = [
+    ("syrian_cells", "Syrian MCC 417", "#0072B2"),
+    ("israeli_cells", "Israeli MCC 425", "#D55E00"),
 ]
-
 SYRIA_CITIES = [
     ("Gaziantep", 37.38, 37.07),
     ("Şanlıurfa", 38.79, 37.17),
@@ -91,24 +90,18 @@ GAZA_CITIES = [
     ("Khan Yunis", 34.303, 31.342),
     ("Rafah", 34.256, 31.288),
 ]
-JORDAN_CITIES = [
-    ("Amman", 35.91, 31.95),
-    ("Irbid", 35.85, 32.56),
-    ("Aqaba", 35.00, 29.53),
+GOLAN_CITIES = [
+    ("Majdal Shams", 35.7697, 33.2697),
+    ("Buq'ata", 35.7790, 33.2010),
+    ("Quneitra", 35.8246, 33.1257),
+    ("Katzrin", 35.6914, 32.9923),
 ]
-
 MCC_NAMES = {
     204: "Netherlands", 206: "Belgium", 208: "France", 216: "Hungary",
     222: "Italy", 230: "Czechia", 231: "Slovakia", 232: "Austria",
     238: "Denmark", 260: "Poland", 262: "Germany", 270: "Luxembourg",
     293: "Slovenia",
 }
-
-MNC_NAMES = {
-    1: "Partner", 2: "Cellcom", 3: "Pelephone", 5: "Jawwal",
-    6: "Ooredoo", 7: "Hot Mobile", 9: "We4G",
-}
-
 
 def rows(path: Path) -> list[dict[str, str]]:
     if not path.exists():
@@ -314,27 +307,11 @@ def make_collection_maps(data: Path, output: Path) -> None:
             "cities": GAZA_CITIES,
             "zoom": 11,
         },
-        {
-            "title": "(d) Jordan",
-            "grid": data / "jordan-grid.csv",
-            "groups": JORDAN_GROUPS,
-            "raster_groups": JORDAN_GROUPS[:1],
-            "cell_overlay_groups": JORDAN_GROUPS[1:],
-            "overlay_groups": [],
-            "legend_ncol": 1,
-            "legend_font": 4.0,
-            "bbox": JORDAN_BBOX,
-            "step": (0.0022525, 0.00265),
-            "bin_factor": 2,
-            "countries": {"JO", "IL", "PS", "SA", "SY", "IQ"},
-            "cities": JORDAN_CITIES,
-            "zoom": 7,
-        },
     ]
-    fig = plt.figure(figsize=(7.0, 3.55))
+    fig = plt.figure(figsize=(7.0, 3.10))
     gs = fig.add_gridspec(
-        1, 4, width_ratios=(1.65, 0.62, 0.62, 0.42),
-        left=0.025, right=0.985, bottom=0.18, top=0.90, wspace=0.08,
+        1, 3, width_ratios=(1.75, 0.66, 0.66),
+        left=0.025, right=0.985, bottom=0.11, top=0.93, wspace=0.08,
     )
     for spec, case in zip(gs, cases, strict=True):
         ax = fig.add_subplot(spec)
@@ -400,11 +377,6 @@ def make_collection_maps(data: Path, output: Path) -> None:
             fontsize=case["legend_font"], handlelength=1.2,
             handletextpad=0.45, columnspacing=0.65, labelspacing=0.25,
         )
-    operator_ax = fig.add_axes((0.085, 0.085, 0.42, 0.235))
-    draw_west_bank_operator(
-        operator_ax, data / "west-bank-operator-year.csv",
-        title="(e) Israeli operator composition", compact=True,
-    )
     attribution = TILE_ATTRIBUTION[BASEMAP].replace(r"\copyright{}", "©")
     fig.text(0.985, 0.012, attribution, ha="right", fontsize=5.0, color="#555")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -414,6 +386,98 @@ def make_collection_maps(data: Path, output: Path) -> None:
     fig.savefig(output.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
     print(f"[figure] {output.relative_to(ROOT)}")
+
+
+def make_golan_map(data: Path, output: Path) -> None:
+    grid = rows(data / "golan-heights-grid.csv")
+    arrays, vmax = collection_array(
+        grid, GOLAN_GROUPS, GOLAN_BBOX, (0.001802, 0.00215), bin_factor=1,
+    )
+    totals = {
+        key: int(sum(float(row[key]) for row in grid))
+        for key, _label, _color in GOLAN_GROUPS
+    }
+
+    line_rows = rows(data / "golan-undof-lines.csv")
+    lines: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    for row in sorted(line_rows, key=lambda item: (item["line"], int(item["seq"]))):
+        lines[row["line"]].append((float(row["lon"]), float(row["lat"])))
+
+    fig, ax = plt.subplots(figsize=(3.35, 4.35))
+    fig.subplots_adjust(left=0.025, right=0.985, bottom=0.15, top=0.985)
+    setup_map(ax, GOLAN_BBOX, {"IL", "SY", "JO", "LB"}, zoom=10)
+
+    # The official UNDOF map identifies the western Alpha ceasefire line and
+    # eastern Bravo line. Shade only their shared latitude range so the figure
+    # does not imply a separation area beyond the supplied line geometries.
+    alpha = np.asarray(lines["Alpha"])
+    bravo = np.asarray(lines["Bravo"])
+    lo = max(float(alpha[:, 1].min()), float(bravo[:, 1].min()))
+    hi = min(float(alpha[:, 1].max()), float(bravo[:, 1].max()))
+    common_lat = np.linspace(lo, hi, 500)
+
+    def interpolate_lon(points: np.ndarray) -> np.ndarray:
+        order = np.argsort(points[:, 1])
+        return np.interp(common_lat, points[order, 1], points[order, 0])
+
+    alpha_lon = interpolate_lon(alpha)
+    bravo_lon = interpolate_lon(bravo)
+    ax.fill_betweenx(
+        common_lat, alpha_lon, bravo_lon, color="#E9C46A", alpha=0.20,
+        linewidth=0, zorder=2.6,
+    )
+
+    ax.imshow(
+        collection_rgba(arrays, GOLAN_GROUPS, vmax),
+        origin="lower", extent=GOLAN_BBOX, interpolation="nearest", zorder=3,
+    )
+    ax.plot(alpha[:, 0], alpha[:, 1], color="#24282a", linewidth=0.9,
+            linestyle="-", zorder=4.7)
+    ax.plot(bravo[:, 0], bravo[:, 1], color="#24282a", linewidth=0.9,
+            linestyle=(0, (3, 2)), zorder=4.7)
+
+    for label, lon, lat in GOLAN_CITIES:
+        ax.plot(lon, lat, marker="o", markersize=1.7, color="#27231f", zorder=5.1)
+        text = ax.annotate(
+            label, (lon, lat), xytext=(2.0, 1.7), textcoords="offset points",
+            fontsize=5.5, color="#27231f", weight="semibold",
+            ha="left", va="bottom", zorder=5.2,
+        )
+        text.set_path_effects([path_effects.withStroke(linewidth=1.4, foreground="white")])
+
+    zone = ax.text(
+        35.862, 33.055, "UNDOF area of\nseparation", ha="center", va="center",
+        fontsize=5.2, color="#5b4a20", rotation=78, zorder=5.3,
+    )
+    zone.set_path_effects([path_effects.withStroke(linewidth=1.6, foreground="white")])
+
+    handles = [
+        Line2D([0], [0], color=color, linewidth=3.2,
+               label=f"{label} · {totals[key]:,}")
+        for key, label, color in GOLAN_GROUPS
+    ] + [
+        Line2D([0], [0], color="#24282a", linewidth=0.9,
+               linestyle="-", label="Alpha ceasefire line"),
+        Line2D([0], [0], color="#24282a", linewidth=0.9,
+               linestyle=(0, (3, 2)), label="Bravo line"),
+    ]
+    ax.legend(
+        handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.025),
+        ncol=2, frameon=False, fontsize=5.35, handlelength=1.55,
+        handletextpad=0.45, columnspacing=0.75, labelspacing=0.35,
+    )
+
+    attribution = TILE_ATTRIBUTION[BASEMAP].replace(r"\copyright{}", "©")
+    fig.text(
+        0.985, 0.012,
+        f"{attribution}; Alpha/Bravo lines © OpenStreetMap contributors",
+        ha="right", fontsize=3.9, color="#555",
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=600, bbox_inches="tight")
+    fig.savefig(output.with_suffix(".png"), dpi=450, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[figure] {output.relative_to(ROOT)} (vmax={vmax:g} cells/bin)")
 
 
 def annual_lookup(path: Path) -> dict[int, dict[str, int]]:
@@ -488,60 +552,6 @@ def make_case_figure(
     print(f"[figure] {output.relative_to(ROOT)} (shared map vmax={vmax:g} cells/bin)")
 
 
-def draw_west_bank_operator(
-    ax: plt.Axes, data: Path, *, title: str | None = None, compact: bool = False,
-) -> None:
-    raw = [r for r in rows(data) if int(r["mnc"]) not in (5, 6)]
-    years = sorted({int(r["year"]) for r in raw})
-    mncs = sorted(
-        {int(r["mnc"]) for r in raw},
-        key=lambda m: sum(int(r["cells"]) for r in raw if int(r["mnc"]) == m),
-        reverse=True,
-    )
-    top = mncs[:7]
-    values = defaultdict(int)
-    for r in raw:
-        values[(int(r["year"]), int(r["mnc"]))] = int(r["cells"])
-
-    palette = ["#b23a48", "#8c4f62", "#c27824", "#6d4c8e", "#527b91", "#8a8078", "#b1a69b"]
-    x = np.arange(len(years))
-    bottom = np.zeros(len(years))
-    for mnc, color in zip(top, palette, strict=True):
-        vals = np.array([values[(y, mnc)] for y in years])
-        label = f"{MNC_NAMES.get(mnc, f'MNC {mnc}')} ({mnc:02d})"
-        ax.bar(x, vals, bottom=bottom, width=0.64, color=color, label=label)
-        bottom += vals
-    ax.set_xticks(x, years)
-    ax.set_ylabel("Distinct cells")
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.grid(axis="y", color="#e0e0e0", linewidth=0.45)
-    if title:
-        ax.set_title(title, fontsize=6.8 if compact else 8.0, weight="semibold", pad=2)
-    if compact:
-        ax.set_ylim(0, bottom.max() * 1.32)
-        ax.legend(
-            frameon=False, fontsize=4.4, ncol=4, loc="upper center",
-            bbox_to_anchor=(0.5, 0.99), columnspacing=0.6, handlelength=1.1,
-        )
-        ax.tick_params(labelsize=5.2)
-        ax.set_ylabel("Distinct cells", fontsize=5.7)
-    else:
-        ax.legend(
-            frameon=False, fontsize=5.4, ncol=2, loc="lower center",
-            bbox_to_anchor=(0.5, 1.0), columnspacing=0.8, handlelength=1.5,
-        )
-
-
-def make_west_bank_operator_figure(data: Path, output: Path) -> None:
-    fig, ax = plt.subplots(figsize=(3.33, 2.15))
-    draw_west_bank_operator(ax, data)
-    fig.subplots_adjust(left=0.17, right=0.98, bottom=0.17, top=0.72)
-    fig.savefig(output, bbox_inches="tight")
-    fig.savefig(output.with_suffix(".png"), dpi=220, bbox_inches="tight")
-    plt.close(fig)
-    print(f"[figure] {output.relative_to(ROOT)}")
-
-
 def make_aliasing_figure(data: Path, output: Path) -> None:
     raw = rows(data)
     agg = defaultdict(lambda: [0, 0])
@@ -610,10 +620,7 @@ def main() -> None:
     paper_style()
 
     make_collection_maps(args.data, args.figs / "cross_border_case_maps.pdf")
-    make_west_bank_operator_figure(
-        args.data / "west-bank-operator-year.csv",
-        args.figs / "west_bank_israeli_operator_mix.pdf",
-    )
+    make_golan_map(args.data, args.figs / "golan_heights_mcc_map.pdf")
     make_aliasing_figure(
         args.data / "aliasing" / "germany-austria-local-suffix-matches.csv",
         args.figs / "germany_austria_aliasing_diagnostic.pdf",

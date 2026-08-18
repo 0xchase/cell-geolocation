@@ -41,23 +41,96 @@ testing (MCC 001) and for use in internal or private networks (MCC
 are not assigned by the \ac{ITU}.  Our data includes many examples of base
 stations assigned one of these MCCs. 
 
-\clearpage
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{military_defense_mcc_maps.pdf}
+    \caption{Testing, private, and unassigned MCC identities at four research, industrial, and defense sites.}
+    \label{fig:military-defense-mcc-maps}
+\end{figure}
+
+\subsection{Out-of-Country \acp{MCC}}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{out_of_country_mcc_matrix.pdf}
+    \caption{Out-of-country cellular identities more than 25\,km beyond their assigned \ac{MCC} territory concentrate in a small number of located-country and MCC-country pairs.}
+    \label{fig:out-of-country-mcc-matrix}
+\end{figure*}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{geopolitical_defense_mcc_maps.pdf}
+    \caption{Foreign MCC identities at four military and training sites.}
+    \label{fig:geopolitical-defense-mcc-maps}
+\end{figure}
+
+\FloatBarrier
+
+\subsection{Contested Territories}
+
+\begin{figure}[t]
+\centering
+\setlength{\tabcolsep}{1pt}
+\renewcommand{\arraystretch}{1.0}
+\begin{tabular}{cc}
+\shortstack{%
+\scriptsize\textbf{(a) Ukraine, 2024}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{ukraine_progression_2024.png}%
+\\[-1pt] \tiny 30{,}628 RU \textbar{} 234{,}113 UA \textbar{} 0 D2C} &
+\shortstack{%
+\scriptsize\textbf{(b) Ukraine, 2025}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{ukraine_progression_2025.png}%
+\\[-1pt] \tiny 79{,}931 RU \textbar{} 252{,}537 UA \textbar{} 6{,}570 D2C} \\
+\shortstack{%
+\scriptsize\textbf{(c) Ukraine, 2026 (Jan--Jun)}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{ukraine_progression_2026.png}%
+\\[-1pt] \tiny 58{,}002 RU \textbar{} 177{,}378 UA \textbar{} 63{,}270 D2C} &
+\shortstack{%
+\scriptsize\textbf{(d) Georgia, collection}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{georgia_russia_density.png}%
+\\[-1pt] \tiny 1{,}175 RU \textbar{} 95{,}606 GE} \\
+\end{tabular}
+
+\smallskip
+\noindent\makebox[\linewidth][c]{%
+\begin{tabular}{r@{\hspace{2pt}}l}
+\tiny Russian terrestrial (MCC 250) &
+\includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_ru.png}%
+\\
+\tiny Domestic terrestrial (MCC 255/282) &
+\includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_ua.png}%
+\\
+\tiny Kyivstar Direct-to-Cell (255-707) &
+\includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_sat.png}%
+\\
+& \makebox[0.40\linewidth][l]{\makebox[0pt][c]{\tiny ${10}^{0}$}\hspace*{0.1739\linewidth}\makebox[0pt][c]{\tiny ${10}^{1}$}\hspace*{0.1739\linewidth}\makebox[0pt][c]{\tiny ${10}^{2}$}}
+\end{tabular}%
+}
+\par\vspace{2pt}
+{\tiny Distinct cells per 1\,km square bin (shared log scale); dominant network sets hue.\quad\rule[0.15em]{1.4em}{1pt}~Documented front (Ukraine)}
+
+{\tiny Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
+
+    \caption{Density of distinct Russian, domestic, and Kyivstar Direct-to-Cell identities across Ukraine by year and Georgia collection-wide, on one shared scale.}
+    \label{fig:ukraine-progression}
+\end{figure}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{cross_border_case_maps.pdf}
+    \caption{Latest positions of collection-wide identities use log-scaled grid cells for dominant networks and bordered markers for foreign MCCs across Northern Syria, the West Bank, and the Gaza Strip.}
+    \label{fig:cross-border-case-maps}
+\end{figure*}
+
+\FloatBarrier
+
+\subsection{Spoofing}
+
 \noindent\begin{minipage}[t]{\columnwidth}
     \centering
-    \includegraphics[width=\columnwidth]{military_defense_mcc_maps.pdf}
-    \captionof{figure}{Testing, private, and unassigned MCC identities at four research, industrial, and defense sites.}
-    \label{fig:military-defense-mcc-maps}
+    \includegraphics[width=\columnwidth]{lima_identity_replay_column.pdf}
+    \captionof{figure}{The same 668 Ukrainian identities retain a distributed home footprint but produce 2{,}922 observations concentrated in one Lima neighborhood beginning in mid-2025, although only seven appear at home and Lima within the same hour.}
+    \label{fig:lima-identity-replay}
 \end{minipage}
 
-\vfill
-\newpage
-\vspace*{\fill}
-
-\noindent\begin{minipage}[b]{\columnwidth}
-    \centering
-    \includegraphics[width=\columnwidth]{geopolitical_defense_mcc_maps.pdf}
-    \captionof{figure}{Foreign MCC identities at four military and training sites.}
-    \label{fig:geopolitical-defense-mcc-maps}
-\end{minipage}
-
-\newpage
+\FloatBarrier

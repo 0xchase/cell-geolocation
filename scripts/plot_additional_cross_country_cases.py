@@ -30,47 +30,29 @@ MAP_UNITS = ROOT / "data" / "reference" / "ne_10m_admin_0_map_units.geojson"
 BASEMAP = "carto_voyager_nolabels_retina"
 
 PALETTE = {
-    "JM": "#D55E00", "MC": "#7A3E9D", "RU": "#C43C39",
     "AE": "#D55E00", "SA": "#E69F00", "OM": "#009E73",
     "SO": "#7A3E9D", "NE": "#56B4E9", "DZ": "#CC79A7",
     "HK": "#7A3E9D", "CN": "#D55E00", "MO": "#0072B2",
-    "IL": "#D55E00", "TR": "#D55E00", "CY": "#0072B2",
     "AM": "#7A3E9D", "OTHER": "#666666",
 }
 
 LABELS = {
-    "JM": "Jamaican MCC", "MC": "Monaco MCC", "RU": "Russian MCC",
     "AE": "UAE", "SA": "Saudi Arabia", "OM": "Oman", "SO": "Somalia",
     "NE": "Niger", "DZ": "Algeria", "HK": "Hong Kong", "CN": "China",
-    "MO": "Macao", "IL": "Israel", "TR": "Türkiye", "CY": "Cyprus",
-    "AM": "Armenia", "OTHER": "Other MCCs",
+    "MO": "Macao", "AM": "Armenia", "OTHER": "Other MCCs",
 }
 
-MAJOR = [
-    dict(key="caribbean-jamaica", title="(a) Caribbean: Jamaican MCC",
-         bbox=(-79.0, -58.0, 10.5, 26.5), countries=set(), zoom=5,
-         cities=[("Port-au-Prince", -72.31, 18.54), ("Kingston", -76.79, 17.97),
-                 ("Bridgetown", -59.62, 13.10)]),
-    dict(key="kosovo-monaco", title="(b) Kosovo: Monaco MCC",
-         bbox=(20.0, 21.9, 41.8, 43.3), countries={"XK", "RS", "AL", "MK", "ME"}, zoom=8,
-         cities=[("Pristina", 21.17, 42.66), ("Prizren", 20.74, 42.21)]),
-]
-
-SECONDARY = [
-    dict(key="yemen-foreign", title="(a) Yemen", bbox=(41.5, 54.7, 12.0, 18.8),
-         countries={"YE", "SA", "OM", "DJ", "ER", "SO"}, zoom=6,
+APPENDIX_CASES = [
+    dict(key="yemen-foreign", title="(a) Yemen", bbox=(42.7, 52.7, 12.3, 17.4),
+         countries={"YE", "SA", "OM", "DJ", "ER", "SO"}, zoom=8,
          cities=[("Sana'a", 44.21, 15.37), ("Marib", 45.33, 15.46),
                  ("Aden", 45.03, 12.79), ("Mukalla", 49.13, 14.54)]),
-    dict(key="myanmar-foreign", title="(b) Myanmar", bbox=(92.0, 102.6, 9.5, 28.8),
-         countries={"MM", "CN", "IN", "TH", "LA", "BD"}, zoom=5,
+    dict(key="myanmar-foreign", title="(b) Myanmar", bbox=(95.5, 101.7, 18.8, 27.8),
+         countries={"MM", "CN", "IN", "TH", "LA", "BD"}, zoom=8,
          cities=[("Yangon", 96.16, 16.84), ("Mandalay", 96.08, 21.98),
                  ("Lashio", 97.75, 22.94), ("Myitkyina", 97.40, 25.38)]),
-    dict(key="cyprus-turkiye", title="(c) Cyprus–Türkiye", bbox=(31.8, 35.0, 34.5, 36.7),
-         countries={"CY", "TR"}, zoom=7,
-         cities=[("Nicosia", 33.38, 35.19), ("Kyrenia", 33.32, 35.34),
-                 ("Mersin", 34.63, 36.81)]),
-    dict(key="azerbaijan-armenia", title="(d) Azerbaijan: Armenian MCC", bbox=(44.3, 50.6, 38.3, 42.3),
-         countries={"AZ", "AM", "GE", "IR", "TR"}, zoom=7,
+    dict(key="azerbaijan-armenia", title="(c) Azerbaijan: Armenian MCC", bbox=(44.5, 50.0, 38.7, 42.0),
+         countries={"AZ", "AM", "GE", "IR", "TR"}, zoom=8,
          cities=[("Yerevan", 44.51, 40.18), ("Khankendi", 46.75, 39.82),
                  ("Baku", 49.87, 40.41)]),
 ]
@@ -111,7 +93,7 @@ def categories(key: str, rows: list[dict[str, str]]) -> list[str]:
     if key == "yemen-foreign":
         order = ["AE", "SA", "OM", "SO", "NE", "DZ"]
         return [x for x in order if x in homes] + (["OTHER"] if any(x not in order for x in homes) else [])
-    order = ["JM", "MC", "RU", "HK", "CN", "MO", "IL", "TR", "CY", "AM"]
+    order = ["HK", "CN", "MO", "AM"]
     return [x for x in order if x in homes]
 
 
@@ -153,23 +135,24 @@ def draw_case(ax: plt.Axes, spec: dict) -> None:
               handletextpad=0.3, columnspacing=0.7)
 
 
-def render(specs: list[dict], output: Path, figsize: tuple[float, float], shape: tuple[int, int],
-           width_ratios: list[float] | None = None) -> None:
-    fig, axes = plt.subplots(*shape, figsize=figsize, squeeze=False)
-    if width_ratios is not None:
-        plt.close(fig)
-        fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(*shape, width_ratios=width_ratios, left=0.025, right=0.985,
-                              bottom=0.12, top=0.94, wspace=0.10, hspace=0.28)
-        axes = np.asarray([[fig.add_subplot(gs[r, c]) for c in range(shape[1])] for r in range(shape[0])])
-    else:
-        fig.subplots_adjust(left=0.025, right=0.985, bottom=0.10, top=0.94, wspace=0.10, hspace=0.24)
-    flat = list(axes.flat)
-    for ax, spec in zip(flat, specs, strict=False):
+def render_appendix(output: Path) -> None:
+    """Lay out the three retained cases at their natural map aspect ratios."""
+    by_key = {spec["key"]: spec for spec in APPENDIX_CASES}
+    fig = plt.figure(figsize=(7.0, 5.2))
+    gs = fig.add_gridspec(
+        2, 2, width_ratios=(1.45, 0.75), height_ratios=(0.86, 1.14),
+        left=0.025, right=0.985, bottom=0.055, top=0.965,
+        wspace=0.10, hspace=0.24,
+    )
+    axes = [
+        (fig.add_subplot(gs[0, 0]), by_key["yemen-foreign"]),
+        (fig.add_subplot(gs[:, 1]), by_key["myanmar-foreign"]),
+        (fig.add_subplot(gs[1, 0]), by_key["azerbaijan-armenia"]),
+    ]
+    for ax, spec in axes:
         draw_case(ax, spec)
-    for ax in flat[len(specs):]: ax.set_visible(False)
     attribution = TILE_ATTRIBUTION[BASEMAP].replace(r"\copyright{}", "©")
-    fig.text(0.985, 0.012, attribution, ha="right", fontsize=4.5, color="#555")
+    fig.text(0.985, 0.008, attribution, ha="right", fontsize=4.5, color="#555")
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=600, bbox_inches="tight")
     fig.savefig(output.with_suffix(".png"), dpi=450, bbox_inches="tight")
@@ -179,8 +162,7 @@ def render(specs: list[dict], output: Path, figsize: tuple[float, float], shape:
 
 def main() -> None:
     style()
-    render(MAJOR, FIGS / "additional_cross_country_major.pdf", (7.0, 2.45), (1, 2), [1.55, 0.95])
-    render(SECONDARY, FIGS / "additional_cross_country_secondary.pdf", (7.0, 4.45), (2, 2))
+    render_appendix(FIGS / "additional_cross_country_appendix.pdf")
 
 
 if __name__ == "__main__":

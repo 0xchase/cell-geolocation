@@ -1,38 +1,6 @@
 \section{Case Studies}
 \label{sec:casestudies}
 
-\subsection{Out-of-Country \acp{MCC}}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\linewidth]{out_of_country_mcc_matrix.pdf}
-    \caption{Out-of-country cellular identities more than 25\,km beyond their
-    assigned \ac{MCC} territory concentrate in a small number of
-    located-country and MCC-country pairs.}
-    \label{fig:out-of-country-mcc-matrix}
-\end{figure*}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\linewidth]{cross_border_case_maps.pdf}
-    \caption{Latest positions of collection-wide identities use log-scaled grid cells for the dominant networks and bordered markers for foreign MCCs, while the operator composition identifies the Israeli networks represented in the West Bank.}
-    \label{fig:cross-border-case-maps}
-\end{figure*}
-
-\begin{figure*}[p]
-    \centering
-    \includegraphics[width=\linewidth]{additional_cross_country_major.pdf}
-    \caption{Large 25\,km-buffered mismatches reveal documented extraterritorial Jamaican MCC use across the Caribbean and Monaco's legacy code across Kosovo.}
-    \label{fig:additional-cross-country-major}
-\end{figure*}
-
-\begin{figure*}[p]
-    \centering
-    \includegraphics[width=\linewidth]{additional_cross_country_secondary.pdf}
-    \caption{Additional 25\,km-buffered mismatches form geographically coherent concentrations in Yemen, Myanmar, Cyprus and T\"urkiye, and Azerbaijan.}
-    \label{fig:additional-cross-country-secondary}
-\end{figure*}
-
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{germany_austria_aliasing_diagnostic.pdf}
@@ -45,27 +13,6 @@
     \includegraphics[width=\linewidth]{satellite_world_map.pdf}
     \caption{Satellite-associated cellular observations combine TAC centroids for D2C-like populations with sparse directly assigned and onboard-network locations, while all Starlink and SpaceX observations share one category.}
     \label{fig:satellite-world-map}
-\end{figure*}
-
-\begin{figure*}[p]
-    \centering
-    \includegraphics[width=\linewidth]{satellite_eci_reuse.pdf}
-    \caption{Collapsing TAC variants to PLMN--ECI identities corrects population counts and reveals repeated national-scale geographic reuse of individual ECIs.}
-    \label{fig:satellite-eci-reuse}
-\end{figure*}
-
-\begin{figure*}[p]
-    \centering
-    \includegraphics[width=\linewidth]{satellite_visibility_timeline.pdf}
-    \caption{Daily ECI visibility separates rollout cohorts and synchronized collection gaps, while the near-unit query ratio identifies crawler cadence rather than network traffic.}
-    \label{fig:satellite-visibility-timeline}
-\end{figure*}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\linewidth]{ocean_activity_global.pdf}
-    \caption{Buffered offshore cellular observations concentrate around eastern Asia, the North Atlantic margins, and Southeast Asia, while suspected sentinel and polar outlier coordinates are marked separately.}
-    \label{fig:ocean-activity-global}
 \end{figure*}
 
 \begin{figure*}[t]
@@ -88,50 +35,6 @@
     \includegraphics[width=\linewidth]{moving_mccs_overview.pdf}
     \caption{Among cell identities with an exact observed span over 10\,km, most movements are short, while longer-distance endpoints are globally distributed and vary substantially in observation support.}
     \label{fig:moving-mccs-overview}
-\end{figure*}
-
-\begin{figure*}[t]
-\centering
-\setlength{\tabcolsep}{1pt}
-\renewcommand{\arraystretch}{1.0}
-\begin{tabular}{cccc}
-\small\textbf{2024} & \small\textbf{2025} & \small\textbf{2026 (Jan--Jun)} & \small\textbf{Georgia (collection)} \\
-\shortstack{%
-\includegraphics[width=0.245\linewidth]{ukraine_progression_2024.png}%
-\\[-1pt] \scriptsize 30{,}628 RU \textbar{} 234{,}113 UA \textbar{} 0 D2C} &
-\shortstack{%
-\includegraphics[width=0.245\linewidth]{ukraine_progression_2025.png}%
-\\[-1pt] \scriptsize 79{,}931 RU \textbar{} 252{,}537 UA \textbar{} 6{,}570 D2C} &
-\shortstack{%
-\includegraphics[width=0.245\linewidth]{ukraine_progression_2026.png}%
-\\[-1pt] \scriptsize 58{,}002 RU \textbar{} 177{,}378 UA \textbar{} 63{,}270 D2C} &
-\shortstack{%
-\includegraphics[width=0.245\linewidth]{georgia_russia_density.png}%
-\\[-1pt] \scriptsize 1{,}175 RU \textbar{} 95{,}606 GE} \\
-\end{tabular}
-
-\smallskip
-\noindent\makebox[\linewidth][c]{%
-\begin{tabular}{r@{\hspace{3pt}}l}
-\scriptsize Russian terrestrial (MCC 250) &
-\includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_ru.png}%
-\\
-\scriptsize Domestic terrestrial (MCC 255/282) &
-\includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_ua.png}%
-\\
-\scriptsize Kyivstar Direct-to-Cell (255-707) &
-\includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_sat.png}%
-\\
-& \makebox[0.3\linewidth][l]{\hspace*{0.0000\linewidth}\makebox[0pt][c]{\scriptsize ${10}^{0}$}\hspace*{0.1304\linewidth}\makebox[0pt][c]{\scriptsize ${10}^{1}$}\hspace*{0.1304\linewidth}\makebox[0pt][c]{\scriptsize ${10}^{2}$}}
-\end{tabular}%
-}
-\par\vspace{2pt}
-{\scriptsize Distinct cells per 1\,km square bin (log scale, shared by all networks and all 4 panels); each bin takes the hue of whichever network has the most cells in it.\quad\rule[0.15em]{1.4em}{1pt}~Documented front (Ukraine)}
-
-{\scriptsize Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
-
-    \caption{Density of distinct Russian, domestic, and Kyivstar Direct-to-Cell identities across Ukraine by year and Georgia collection-wide, on one shared scale.}
-    \label{fig:ukraine-progression}
 \end{figure*}
 
 \begin{figure*}[p]
@@ -160,13 +63,6 @@
     \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{unresolved_attractor_mechanisms.pdf}
     \caption{Nationwide reuse of GSM CID 22812 across 16{,}592 LACs explains Chengde as a lookup-key alias, while compact Krasny Sulin and Penza cell constellations recur in timestamp-exact batches near the Demyansk UAV/EW training airfield and at the Smolensk Nuclear Power Plant, where anti-drone technical suppression has been reported, consistent with scan-list replay, cached submissions, or rebroadcast rather than physical movement.}
     \label{fig:unresolved-attractor-mechanisms}
-\end{figure*}
-
-\begin{figure*}[p]
-    \centering
-    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{lima_identity_replay.pdf}
-    \caption{The same 668 Ukrainian identities retain a distributed home footprint but produce 2{,}922 observations concentrated in one Lima neighborhood beginning in mid-2025, although only seven appear at home and Lima within the same hour.}
-    \label{fig:lima-identity-replay}
 \end{figure*}
 
 \begin{figure*}[p]

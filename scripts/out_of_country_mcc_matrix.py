@@ -71,9 +71,11 @@ NAME_OVERRIDES = {
     "CD": "DR Congo",
     "CG": "Congo",
     "CI": "Côte d’Ivoire",
+    "CN": "China",
     "CZ": "Czechia",
     "GB": "United Kingdom",
     "IR": "Iran",
+    "IQ": "Iraq",
     "KP": "North Korea",
     "KR": "South Korea",
     "LA": "Laos",
@@ -516,89 +518,91 @@ def make_plot(
         matrix[host_idx[host], j] += cells
 
     columns = homes + ["OTHER"]
-    row_totals = matrix.sum(axis=1)
-    col_totals = matrix.sum(axis=0)
     positive = matrix[matrix > 0]
     vmax = int(positive.max())
-    vmin = max(1, int(np.quantile(positive, 0.10)))
 
     mpl.rcParams.update({
-        "font.family": "serif",
-        "font.serif": ["Times New Roman", "Nimbus Roman", "DejaVu Serif"],
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Source Sans 3", "Source Sans Pro", "DejaVu Sans"],
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
     })
-    # Wide and compact: this is a two-column article figure, not a standalone
-    # poster. The caption supplies the title, and the vertical colour scale
-    # avoids spending a full extra row below the matrix.
-    fig = plt.figure(figsize=(7.0, 3.65), constrained_layout=False)
-    gs = fig.add_gridspec(
-        2, 3, width_ratios=(5.65, 1.0, 0.13), height_ratios=(0.85, 4.3),
-        left=0.205, right=0.965, bottom=0.26, top=0.97, wspace=0.08, hspace=0.08,
-    )
-    ax_top = fig.add_subplot(gs[0, 0])
-    ax = fig.add_subplot(gs[1, 0])
-    ax_right = fig.add_subplot(gs[1, 1], sharey=ax)
-    cax = fig.add_subplot(gs[1, 2])
+    # A single visual channel is easier to scan than the former combination of
+    # bubble area, colour, and two marginal bar charts. Totals live directly in
+    # the labels; the matrix is a log-colour table with selective annotations.
+    fig, ax = plt.subplots(figsize=(7.0, 2.9))
+    fig.subplots_adjust(left=0.145, right=0.885, bottom=0.055, top=0.76)
 
-    # Marginal totals are bars; the matrix shows the two-dimensional pairing.
+    cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        "cells", ["#eef5f3", "#b8d8d2", "#4b948c", "#145f64", "#163b4a"]
+    )
+    cmap.set_bad("#f6f7f6")
+    norm = mpl.colors.LogNorm(vmin=1, vmax=vmax)
+    masked = np.ma.masked_where(matrix == 0, matrix)
+    image = ax.imshow(masked, cmap=cmap, norm=norm, interpolation="none", aspect="auto")
+
     x = np.arange(len(columns))
     y = np.arange(len(hosts))
-    ax_top.bar(x, col_totals, width=0.72, color="#596d7a")
-    ax_top.set_yscale("log")
-    ax_top.set_xlim(-0.6, len(columns) - 0.4)
-    ax_top.set_xticks([])
-    ax_top.set_ylabel("Cells", fontsize=7.2)
-    ax_top.tick_params(axis="y", labelsize=6.2)
-    ax_top.grid(axis="y", color="#dddddd", linewidth=0.45, which="both")
-    ax_top.spines[["top", "right", "bottom"]].set_visible(False)
-    for xi, total in zip(x, col_totals, strict=True):
-        ax_top.text(xi, total * 1.10, short_count(int(total)), ha="center", va="bottom", fontsize=5.6)
 
-    yy, xx = np.nonzero(matrix)
-    values = matrix[yy, xx]
-    # Matplotlib's `s` is marker area. Square-root compression keeps the sparse
-    # tail legible; log colour retains ordering across the full count range.
-    sizes = 18.0 + 360.0 * np.sqrt(values / vmax)
-    scatter = ax.scatter(
-        xx, yy, s=sizes, c=values,
-        cmap=mpl.colors.LinearSegmentedColormap.from_list("cells", ["#e6eef2", "#527b91", "#7a1f2b"]),
-        norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax),
-        edgecolors="#ffffff", linewidths=0.55,
+    def column_label(iso: str) -> str:
+        if iso == "OTHER":
+            return "Other"
+        name = NAME_OVERRIDES.get(iso, names.get(iso, iso))
+        return name.replace("United States", "United\nStates").replace(
+            "United Kingdom", "United\nKingdom"
+        ).replace("French Guiana", "French\nGuiana")
+
+    ax.set_xticks(
+        x,
+        [column_label(iso) for iso in columns],
+        fontsize=5.8,
     )
-    ax.set_xlim(-0.6, len(columns) - 0.4)
-    ax.set_ylim(len(hosts) - 0.4, -0.6)
-    ax.set_xticks(x, [display_name(iso, names) if iso != "OTHER" else "Other MCC countries" for iso in columns],
-                  rotation=43, ha="right", fontsize=6.4)
-    ax.set_yticks(y, [display_name(iso, names) for iso in hosts], fontsize=6.8)
-    ax.set_ylabel("Country or territory where cell is located", fontsize=7.8)
+    ax.tick_params(axis="x", top=True, labeltop=True, bottom=False, labelbottom=False, pad=5, length=0)
+    ax.set_yticks(
+        y,
+        [NAME_OVERRIDES.get(iso, names.get(iso, iso)) for iso in hosts],
+        fontsize=6.8,
+    )
+    ax.tick_params(axis="y", length=0, pad=6)
+    ax.set_xlabel("MCC Country", fontsize=7.3, fontweight="semibold",
+                  color="#26383c", labelpad=5)
+    ax.xaxis.set_label_position("top")
+    ax.set_ylabel("Located Country", fontsize=7.3, fontweight="semibold",
+                  color="#26383c", labelpad=8)
+
+    # White gutters create a light table structure without a prominent grid.
     ax.set_xticks(np.arange(-0.5, len(columns), 1), minor=True)
     ax.set_yticks(np.arange(-0.5, len(hosts), 1), minor=True)
-    ax.grid(which="minor", color="#e2e2e2", linewidth=0.55)
+    ax.grid(which="minor", color="white", linewidth=1.25)
     ax.tick_params(which="minor", bottom=False, left=False)
     for spine in ax.spines.values():
         spine.set_visible(False)
 
-    ax_right.barh(y, row_totals, height=0.68, color="#596d7a")
-    ax_right.set_xscale("log")
-    ax_right.set_ylim(len(hosts) - 0.4, -0.6)
-    ax_right.tick_params(axis="y", left=False, labelleft=False)
-    ax_right.tick_params(axis="x", labelsize=6.2)
-    ax_right.set_xlabel("Cells", fontsize=7.2)
-    ax_right.grid(axis="x", color="#dddddd", linewidth=0.45, which="major")
-    ax_right.spines[["top", "right", "left"]].set_visible(False)
-    for yi, total in zip(y, row_totals, strict=True):
-        ax_right.text(total * 1.08, yi, short_count(int(total)), va="center", fontsize=5.8)
+    # Labels are reserved for material cells so the long tail remains visible
+    # without turning the figure into a table of tiny numbers.
+    for yi, xi in zip(*np.nonzero(matrix), strict=True):
+        value = int(matrix[yi, xi])
+        if value < 100:
+            continue
+        color = "white" if norm(value) >= 0.58 else "#17343a"
+        ax.text(xi, yi, short_count(value), ha="center", va="center",
+                fontsize=6.2, fontweight="semibold", color=color)
 
-    cbar = fig.colorbar(scatter, cax=cax, orientation="vertical")
-    cbar.set_label("Distinct cells per pair (log colour)", fontsize=6.5, labelpad=4)
-    cbar.ax.tick_params(labelsize=5.8, length=2)
-    cbar.outline.set_linewidth(0.45)
+    # Keep the scale outside the matrix so the lower edge can sit close to the
+    # paper caption without sacrificing the full plotting width.
+    cax = fig.add_axes([0.91, 0.22, 0.014, 0.49])
+    cbar = fig.colorbar(image, cax=cax, orientation="vertical")
+    cbar.set_ticks([1, 100, 10_000])
+    cbar.set_ticklabels(["1", "100", "10k"])
+    cbar.ax.tick_params(labelsize=5.8, length=2, pad=2)
+    cbar.outline.set_visible(False)
+    cbar.set_label("Distinct cells (log scale)", fontsize=6.2, color="#394b4f",
+                   labelpad=3)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, bbox_inches="tight")
     preview = output.with_suffix(".png")
-    fig.savefig(preview, dpi=220, bbox_inches="tight")
+    fig.savefig(preview, dpi=360, bbox_inches="tight")
     plt.close(fig)
     print(f"[figure] {output}")
     print(f"[preview] {preview}")
@@ -611,7 +615,7 @@ def parse_args() -> argparse.Namespace:
         help="exclude cells no farther than this distance outside their MCC territory (default: 25)",
     )
     parser.add_argument("--top-hosts", type=int, default=12, help="number of located countries (rows)")
-    parser.add_argument("--top-mcc-countries", type=int, default=8, help="number of MCC countries (columns)")
+    parser.add_argument("--top-mcc-countries", type=int, default=12, help="number of MCC countries (columns)")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--pair-output", type=Path,
