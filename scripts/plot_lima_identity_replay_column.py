@@ -178,10 +178,10 @@ def draw_timeline(ax: plt.Axes, timeline: pd.DataFrame) -> None:
 def render() -> None:
     configure_style()
     data = load_data()
-    fig = plt.figure(figsize=(3.35, 2.95))
+    fig = plt.figure(figsize=(3.35, 3.05))
     grid = fig.add_gridspec(
-        2, 2, left=0.06, right=0.995, bottom=0.085, top=0.975,
-        height_ratios=[1.0, 0.55], hspace=0.18, wspace=0.07,
+        2, 2, left=0.025, right=0.998, bottom=0.075, top=0.985,
+        height_ratios=[1.08, 0.55], hspace=0.10, wspace=0.018,
     )
     draw_lima(fig.add_subplot(grid[0, 0]), data["lima"])
     draw_ukraine(fig.add_subplot(grid[0, 1]), data["homes"])
