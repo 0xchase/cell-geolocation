@@ -36,6 +36,9 @@ _SSH_OPTS = [
 
 # Server has 16 cores and also serves Nominatim; leave headroom.
 DEFAULT_SETTINGS = {
+    # Analysis access is intentionally read-only; this also protects future
+    # scripts that reuse this helper from accidentally mutating the server.
+    "readonly": 2,
     "max_threads": 12,
     "max_execution_time": 7200,
     # The heavy per-cell aggregations group by the table's exact ORDER BY key,

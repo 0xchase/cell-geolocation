@@ -32,3 +32,32 @@ cumulative number of cellular identifiers discovered over time.
     Total               & 87,040,550                        
     \end{tabular}
 \end{table}
+
+\subsection{Testing, Internal, and Non-Existent \acp{MCC}}
+
+The \ac{ITU} \ac{MCC} assignments reserve certain \acp{MCC} for use in network
+testing (MCC 001) and for use in internal or private networks (MCC
+999)~\cite{ITU-OB-1156-2018}. Further, \acp{MCC} beginning with ``1'' or ``8''
+are not assigned by the \ac{ITU}.  Our data includes many examples of base
+stations assigned one of these MCCs. 
+
+\clearpage
+\noindent\begin{minipage}[t]{\columnwidth}
+    \centering
+    \includegraphics[width=\columnwidth]{military_defense_mcc_maps.pdf}
+    \captionof{figure}{Testing, private, and unassigned MCC identities at four research, industrial, and defense sites.}
+    \label{fig:military-defense-mcc-maps}
+\end{minipage}
+
+\vfill
+\newpage
+\vspace*{\fill}
+
+\noindent\begin{minipage}[b]{\columnwidth}
+    \centering
+    \includegraphics[width=\columnwidth]{geopolitical_defense_mcc_maps.pdf}
+    \captionof{figure}{Foreign MCC identities at four military and training sites.}
+    \label{fig:geopolitical-defense-mcc-maps}
+\end{minipage}
+
+\newpage

@@ -1,64 +1,113 @@
 \section{Case Studies}
 \label{sec:casestudies}
 
-\subsection{Testing, Internal, and Non-Existent \acp{MCC}}
-
-The \ac{ITU} \ac{MCC} assignments reserve certain \acp{MCC} for use in network
-testing (MCC 001) and for use in internal or private networks (MCC
-999)~\cite{ITU-OB-1156-2018}. Further, \acp{MCC} beginning with ``1'' or ``8''
-are not assigned by the \ac{ITU}.  Our data includes many examples of base
-stations assigned one of these MCCs. 
-
-
 \subsection{Out-of-Country \acp{MCC}}
 
-
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{out_of_country_mcc_matrix.pdf}
+    \caption{Out-of-country cellular identities more than 25\,km beyond their
+    assigned \ac{MCC} territory concentrate in a small number of
+    located-country and MCC-country pairs.}
+    \label{fig:out-of-country-mcc-matrix}
+\end{figure*}
 
 \begin{figure*}[t]
-\centering
-\setlength{\tabcolsep}{2pt}
-\begin{tabular}{cc}
-\small\textbf{(a) Fixed position (11{,}755)} &
-\small\textbf{(b) Distinct cells per month (log scale)} \\
-\includegraphics[width=0.23\linewidth]{gaza_foreign_static.png} &
-\includegraphics[width=0.73\linewidth]{gaza_foreign_timeline.pdf} \\
-\end{tabular}
+    \centering
+    \includegraphics[width=\linewidth]{cross_border_case_maps.pdf}
+    \caption{Latest positions of collection-wide identities use log-scaled grid cells for the dominant networks and bordered markers for foreign MCCs, while the operator composition identifies the Israeli networks represented in the West Bank.}
+    \label{fig:cross-border-case-maps}
+\end{figure*}
 
-\smallskip
-\begin{tabular}{cccc}
-\multicolumn{4}{c}{\small\textbf{(c) Relocated $>$1\,km, by year}} \\
-\small 2023 (Nov--Dec) & \small 2024 & \small 2025 & \small 2026 (Jan--Jun) \\
-\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2023.png} &
-\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2024.png} &
-\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2025.png} &
-\includegraphics[width=0.230\linewidth]{gaza_foreign_moving_2026.png} \\
-\scriptsize 215 cells & \scriptsize 4{,}219 cells & \scriptsize 3{,}637 cells & \scriptsize 2{,}173 cells \\
-\end{tabular}
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\linewidth]{additional_cross_country_major.pdf}
+    \caption{Large 25\,km-buffered mismatches reveal documented extraterritorial Jamaican MCC use across the Caribbean and Monaco's legacy code across Kosovo.}
+    \label{fig:additional-cross-country-major}
+\end{figure*}
 
-{\scriptsize Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
-    \caption{Foreign network identities in the Gaza Strip cluster at its
-    southern end and are confined to 2024, while Palestinian, Israeli and
-    Egyptian identities persist throughout.}
-    \label{fig:gaza-foreign-identities}
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\linewidth]{additional_cross_country_secondary.pdf}
+    \caption{Additional 25\,km-buffered mismatches form geographically coherent concentrations in Yemen, Myanmar, Cyprus and T\"urkiye, and Azerbaijan.}
+    \label{fig:additional-cross-country-secondary}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{germany_austria_aliasing_diagnostic.pdf}
+    \caption{A majority of foreign identities in Germany and Austria share local identifier suffixes, and the sub-kilometer separation of matched pairs supports identifier aliasing.}
+    \label{fig:germany-austria-aliasing}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{satellite_world_map.pdf}
+    \caption{Satellite-associated cellular observations combine TAC centroids for D2C-like populations with sparse directly assigned and onboard-network locations, while all Starlink and SpaceX observations share one category.}
+    \label{fig:satellite-world-map}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\linewidth]{satellite_eci_reuse.pdf}
+    \caption{Collapsing TAC variants to PLMN--ECI identities corrects population counts and reveals repeated national-scale geographic reuse of individual ECIs.}
+    \label{fig:satellite-eci-reuse}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\linewidth]{satellite_visibility_timeline.pdf}
+    \caption{Daily ECI visibility separates rollout cohorts and synchronized collection gaps, while the near-unit query ratio identifies crawler cadence rather than network traffic.}
+    \label{fig:satellite-visibility-timeline}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{ocean_activity_global.pdf}
+    \caption{Buffered offshore cellular observations concentrate around eastern Asia, the North Atlantic margins, and Southeast Asia, while suspected sentinel and polar outlier coordinates are marked separately.}
+    \label{fig:ocean-activity-global}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \setlength{\tabcolsep}{1pt}
+    \begin{tabular}{cccc}
+        \includegraphics[width=0.245\linewidth]{ocean_vessel_banglalink.pdf} &
+        \includegraphics[width=0.245\linewidth]{ocean_vessel_algeria_18413.pdf} &
+        \includegraphics[width=0.245\linewidth]{ocean_vessel_algeria_18611.pdf} &
+        \includegraphics[width=0.245\linewidth]{ocean_vessel_china_nr_relocation.pdf}
+    \end{tabular}
+    \caption{Large offshore coordinate changes comprise three temporally plausible vessel-carried GSM candidates and one repeatedly supported China Mobile NR relocation separated by a 129-day observation gap.}
+    \label{fig:ocean-vessel-movements}
 \end{figure*}
 
 \subsection{Moving Base Stations}
 
 \begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{moving_mccs_overview.pdf}
+    \caption{Among cell identities with an exact observed span over 10\,km, most movements are short, while longer-distance endpoints are globally distributed and vary substantially in observation support.}
+    \label{fig:moving-mccs-overview}
+\end{figure*}
+
+\begin{figure*}[t]
 \centering
 \setlength{\tabcolsep}{1pt}
 \renewcommand{\arraystretch}{1.0}
-\begin{tabular}{ccc}
-\small\textbf{2024} & \small\textbf{2025} & \small\textbf{2026 (Jan--Jun)} \\
+\begin{tabular}{cccc}
+\small\textbf{2024} & \small\textbf{2025} & \small\textbf{2026 (Jan--Jun)} & \small\textbf{Georgia (collection)} \\
 \shortstack{%
-\includegraphics[width=0.327\linewidth]{ukraine_progression_2024.png}%
+\includegraphics[width=0.245\linewidth]{ukraine_progression_2024.png}%
 \\[-1pt] \scriptsize 30{,}628 RU \textbar{} 234{,}113 UA \textbar{} 0 D2C} &
 \shortstack{%
-\includegraphics[width=0.327\linewidth]{ukraine_progression_2025.png}%
+\includegraphics[width=0.245\linewidth]{ukraine_progression_2025.png}%
 \\[-1pt] \scriptsize 79{,}931 RU \textbar{} 252{,}537 UA \textbar{} 6{,}570 D2C} &
 \shortstack{%
-\includegraphics[width=0.327\linewidth]{ukraine_progression_2026.png}%
-\\[-1pt] \scriptsize 58{,}002 RU \textbar{} 177{,}378 UA \textbar{} 63{,}270 D2C} \\
+\includegraphics[width=0.245\linewidth]{ukraine_progression_2026.png}%
+\\[-1pt] \scriptsize 58{,}002 RU \textbar{} 177{,}378 UA \textbar{} 63{,}270 D2C} &
+\shortstack{%
+\includegraphics[width=0.245\linewidth]{georgia_russia_density.png}%
+\\[-1pt] \scriptsize 1{,}175 RU \textbar{} 95{,}606 GE} \\
 \end{tabular}
 
 \smallskip
@@ -67,7 +116,7 @@ stations assigned one of these MCCs.
 \scriptsize Russian terrestrial (MCC 250) &
 \includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_ru.png}%
 \\
-\scriptsize Ukrainian terrestrial (MCC 255) &
+\scriptsize Domestic terrestrial (MCC 255/282) &
 \includegraphics[width=0.3\linewidth,height=5pt]{ukraine_progression_cbar_ua.png}%
 \\
 \scriptsize Kyivstar Direct-to-Cell (255-707) &
@@ -77,12 +126,115 @@ stations assigned one of these MCCs.
 \end{tabular}%
 }
 \par\vspace{2pt}
-{\scriptsize Distinct cells per 1\,km square bin (log scale, shared by all three networks and all 3 panels); each bin takes the hue of whichever network has the most cells in it.\quad\rule[0.15em]{1.4em}{1pt}~Documented front}
+{\scriptsize Distinct cells per 1\,km square bin (log scale, shared by all networks and all 4 panels); each bin takes the hue of whichever network has the most cells in it.\quad\rule[0.15em]{1.4em}{1pt}~Documented front (Ukraine)}
 
 {\scriptsize Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
 
-    \caption{Density of distinct Russian, Ukrainian and Kyivstar
-    Direct-to-Cell satellite cells across Ukraine, by year, on one
-    shared scale, against the documented front.}
+    \caption{Density of distinct Russian, domestic, and Kyivstar Direct-to-Cell identities across Ukraine by year and Georgia collection-wide, on one shared scale.}
     \label{fig:ukraine-progression}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.90\textheight,keepaspectratio]{spoofing_category_overview.pdf}
+    \caption{Five complementary views separate fixed displacement, alternating destinations, long-range identity replay, and bulk rebroadcast, with the Queen Alia panel showing a synchronized 157-identity subset of a 2{,}640-identity neighborhood, the Samara--Oman coordinate flagged by its repeated digits, and Weihai reaching 137 same-day but only 26 same-hour identities.}
+    \label{fig:spoofing-category-overview}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{coordinated_displacement_regional.pdf}
+    \caption{Four regional campaigns range from Vladimir common-mode displacement and repeated Krasnodar events, where 77\% and 92\% of homes persist, to St Petersburg wholesale coordinate reassignment and a smaller Udmurtia reassignment, where 98\% and 78\% of homes terminate.}
+    \label{fig:coordinated-displacement-regional}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{coordinated_displacement_long_range.pdf}
+    \caption{Northern Vietnam and North Caucasus--northeastern China are exact or near-exact jump--return or replay campaigns with all homes retained, the China Mobile cohort collectively changes its false destination by 1{,}202\,km, and Shaanxi is a lower-confidence common coordinate change because only five of nine homes persist.}
+    \label{fig:coordinated-displacement-long-range}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{unresolved_attractor_mechanisms.pdf}
+    \caption{Nationwide reuse of GSM CID 22812 across 16{,}592 LACs explains Chengde as a lookup-key alias, while compact Krasny Sulin and Penza cell constellations recur in timestamp-exact batches near the Demyansk UAV/EW training airfield and at the Smolensk Nuclear Power Plant, where anti-drone technical suppression has been reported, consistent with scan-list replay, cached submissions, or rebroadcast rather than physical movement.}
+    \label{fig:unresolved-attractor-mechanisms}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{lima_identity_replay.pdf}
+    \caption{The same 668 Ukrainian identities retain a distributed home footprint but produce 2{,}922 observations concentrated in one Lima neighborhood beginning in mid-2025, although only seven appear at home and Lima within the same hour.}
+    \label{fig:lima-identity-replay}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth]{pakistan_changsha_campaign.pdf}
+    \caption{Hourly positions for 70 Islamabad-region identities form persistent home and Changsha bands 3{,}846\,km apart, all return to their homes, and 49 share the exact onset timestamp 2025-01-11 11:07:30 UTC.}
+    \label{fig:pakistan-changsha-campaign}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{iran_asaluyeh_spoofing.pdf}
+    \caption{Asaluyeh concentrates 176 Gulf-coded identities, including 123 first appearing between June 13 and July 15, 2025, at a common Iranian location.}
+    \label{fig:iran-asaluyeh-spoofing}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{iran_domestic_spoofing.pdf}
+    \caption{Four Iranian displacement episodes move 19--42 identities between compact clusters, with their chronology aligned to independently reported conflict, blackout, and GNSS-interference intervals.}
+    \label{fig:iran-domestic-spoofing}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth]{iran_controlled_campaigns.pdf}
+    \caption{Hourly displacement traces show stable-home and Tehran bands for controlled cohorts originating in Urmia, Kazerun, and Mashhad across three distinct episodes.}
+    \label{fig:iran-controlled-campaigns}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth]{moscow_crimea_campaign.pdf}
+    \caption{Hourly positions for seven stable Moscow identities alternate between their home region and the mapped Crimea destination 1{,}218 km away.}
+    \label{fig:moscow-crimea-campaign}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth]{tatarstan_jinan_campaign.pdf}
+    \caption{Hourly positions for the strict nine-identity Tatarstan cohort form parallel home and Jinan bands about 5{,}199\,km apart within a broader 13-identity exact-onset batch at 2024-09-02 01:01:51 UTC.}
+    \label{fig:tatarstan-jinan-campaign}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth]{myanmar_yunnan_campaigns.pdf}
+    \caption{Hourly displacement traces show two seven-identity Shan State cohorts at home and at the same Yunnan endpoint in October 2024 and from February 2025 onward, within a broader endpoint population that reaches 65 same-day but only four same-hour identities.}
+    \label{fig:myanmar-yunnan-campaigns}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.90\textheight,keepaspectratio]{kinematic_raw_campaigns.pdf}
+    \caption{The five strongest raw-time campaigns pair coordinated 100--500\,km coordinate displacements with nearest home/destination observations separated by only 8--222 seconds.}
+    \label{fig:kinematic-raw-campaigns}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{identity_replay_case_studies.pdf}
+    \caption{Four additional coherent long-range endpoint clusters combine stable source regions, exact distant destinations, and concentrated first-seen intervals.}
+    \label{fig:identity-replay-case-studies}
+\end{figure*}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{destination_cluster_diagnostics.pdf}
+    \caption{Mixed-source endpoints at Lijiang, Crimea, and Harbin contrast with an exact reciprocal Jingmen--Chifeng coordinate swap, separating test or rebroadcast patterns and mapping errors from clean identity replay.}
+    \label{fig:destination-cluster-diagnostics}
 \end{figure*}

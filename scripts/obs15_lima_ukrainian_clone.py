@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from plot_helpers import COUNTRIES_GEOJSON, add_osm_basemap, draw_geojson_layer, setup_context_map
+from plot_helpers import add_osm_basemap, draw_geojson_layer
 from ch_remote import ch_df as _remote_ch_df
 
 
@@ -23,6 +23,7 @@ DATA_ROOT = ROOT.parent
 CLICKHOUSE = DATA_ROOT / "clickhouse"
 CH_PATH = DATA_ROOT / "db-export" / "chdata"
 PLOTS = ROOT / "plots"
+COUNTRIES_GEOJSON = ROOT / "data" / "reference" / "ne_10m_admin_0_map_units.geojson"
 
 # Home-network extent used throughout (matches the 'Ukraine home' classifier).
 UA_BBOX = (22.0, 41.0, 44.0, 53.0)  # xmin, xmax, ymin, ymax
@@ -36,6 +37,17 @@ PALETTE = {
     "MNC 702": "#8e6aa7",
     "MNC 707": "#7d7d7d",
 }
+
+
+def setup_basic_map(ax: plt.Axes, bbox: tuple[float, float, float, float]) -> None:
+    """Draw geographic context from the reference data checked into this project."""
+    ax.set_facecolor("#dceaf2")
+    draw_geojson_layer(
+        ax, COUNTRIES_GEOJSON, bbox,
+        facecolor="#f5f1e8", edgecolor="#8a8176", linewidth=0.35, zorder=0,
+    )
+    ax.set_xlim(bbox[0], bbox[1])
+    ax.set_ylim(bbox[2], bbox[3])
 
 
 def ch_df(query: str) -> pd.DataFrame:
@@ -69,7 +81,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         """
         WITH lima AS
         (
-            SELECT DISTINCT lac, cid, cell_type
+            SELECT DISTINCT mnc, lac, cid, cell_type
             FROM cell.geos
             WHERE mcc = 255 AND cid > 0
               AND lon BETWEEN -78 AND -76 AND lat BETWEEN -13 AND -11
@@ -81,7 +93,7 @@ def load_data() -> dict[str, pd.DataFrame]:
             count() AS obs,
             uniqExact((mnc,lac,cid,cell_type)) AS identities
         FROM cell.geos
-        WHERE mcc = 255 AND cid > 0 AND (lac, cid, cell_type) IN lima
+        WHERE mcc = 255 AND cid > 0 AND (mnc, lac, cid, cell_type) IN lima
         GROUP BY location
         ORDER BY obs DESC
         """
@@ -90,7 +102,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         """
         WITH lima AS
         (
-            SELECT DISTINCT lac, cid, cell_type
+            SELECT DISTINCT mnc, lac, cid, cell_type
             FROM cell.geos
             WHERE mcc = 255 AND cid > 0
               AND lon BETWEEN -78 AND -76 AND lat BETWEEN -13 AND -11
@@ -106,7 +118,7 @@ def load_data() -> dict[str, pd.DataFrame]:
                count() AS obs,
                uniqExact((lac, cid, cell_type)) AS identities
         FROM cell.geos
-        WHERE mcc = 255 AND cid > 0 AND (lac, cid, cell_type) IN lima
+        WHERE mcc = 255 AND cid > 0 AND (mnc, lac, cid, cell_type) IN lima
         GROUP BY month, location
         ORDER BY month, location
         """
@@ -118,7 +130,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         """
         WITH lima AS
         (
-            SELECT DISTINCT lac, cid, cell_type
+            SELECT DISTINCT mnc, lac, cid, cell_type
             FROM cell.geos
             WHERE mcc = 255 AND cid > 0
               AND lon BETWEEN -78 AND -76 AND lat BETWEEN -13 AND -11
@@ -128,7 +140,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         SELECT mnc, lac, cid, cell_type,
                avg(lat) AS avg_lat, avg(lon) AS avg_lon, count() AS obs
         FROM cell.geos
-        WHERE mcc = 255 AND cid > 0 AND (lac, cid, cell_type) IN lima
+        WHERE mcc = 255 AND cid > 0 AND (mnc, lac, cid, cell_type) IN lima
           AND lon BETWEEN 22 AND 41 AND lat BETWEEN 44 AND 53
         GROUP BY mnc, lac, cid, cell_type
         """
@@ -138,7 +150,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         """
         WITH lima AS
         (
-            SELECT DISTINCT lac, cid, cell_type
+            SELECT DISTINCT mnc, lac, cid, cell_type
             FROM cell.geos
             WHERE mcc = 255 AND cid > 0
               AND lon BETWEEN -78 AND -76 AND lat BETWEEN -13 AND -11
@@ -147,7 +159,7 @@ def load_data() -> dict[str, pd.DataFrame]:
                countIf(lon BETWEEN -78 AND -76 AND lat BETWEEN -13 AND -11) AS lima_obs,
                countIf(lon BETWEEN 22 AND 41 AND lat BETWEEN 44 AND 53) AS ukraine_obs
         FROM cell.geos
-        WHERE mcc = 255 AND cid > 0 AND (lac, cid, cell_type) IN lima
+        WHERE mcc = 255 AND cid > 0 AND (mnc, lac, cid, cell_type) IN lima
         GROUP BY mnc, lac, cid, cell_type
         HAVING lima_obs > 0 AND ukraine_obs > 0
         ORDER BY ukraine_obs DESC, lima_obs DESC
@@ -215,12 +227,11 @@ def make_figure(data: dict[str, pd.DataFrame], output: Path, preview: Path | Non
             ["C", "D"],
         ]
     )
-    fig.suptitle("Ukrainian cell identities are replayed at a single address in Lima", fontsize=14, fontweight="bold")
+    fig.suptitle("Ukrainian cell identities are replayed in a single Lima neighborhood", fontsize=14, fontweight="bold")
 
     ax = axd["A"]
     bbox = (-120, -30, -56, 50)
-    ax.set_facecolor("#dceaf2")
-    draw_geojson_layer(ax, COUNTRIES_GEOJSON, bbox, facecolor="#f5f1e8", edgecolor="#8a8176", linewidth=0.35, zorder=0)
+    setup_basic_map(ax, bbox)
     ax.scatter(
         americas["lon_bin"],
         americas["lat_bin"],
@@ -243,9 +254,11 @@ def make_figure(data: dict[str, pd.DataFrame], output: Path, preview: Path | Non
 
     ax = axd["B"]
     lima_bbox = (-77.0575, -77.0425, -12.0465, -12.0330)
-    used_tiles = add_osm_basemap(ax, lima_bbox, zoom=15, alpha=0.86, grayscale=True)
+    used_tiles = add_osm_basemap(
+        ax, lima_bbox, zoom=15, alpha=1.0, grayscale=False, source="carto_voyager"
+    )
     if not used_tiles:
-        setup_context_map(ax, lima_bbox, countries={"PE", "Peru"})
+        setup_basic_map(ax, lima_bbox)
     sns.scatterplot(
         data=lima,
         x="lon",
@@ -264,14 +277,14 @@ def make_figure(data: dict[str, pd.DataFrame], output: Path, preview: Path | Non
     ax.text(center_lon, center_lat + 0.0018, "Jiron Mancora cluster", ha="center", fontsize=7.4, bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.72, "pad": 1.0}, zorder=6)
     # Derived from the data rather than hardcoded: the old title's "109" was the
     # count from the deduplicated snapshot.
-    ax.set_title(f"B. {len(lima):,} reports collapse onto one Lima neighborhood point")
+    ax.set_title(f"B. {len(lima):,} reports collapse into one Lima neighborhood cluster")
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.legend(title="", loc="lower right", frameon=True, fontsize=8)
     ax.text(0.02, 0.02, "Map data (c) OpenStreetMap contributors", transform=ax.transAxes, fontsize=5.8, color="#555", zorder=7)
 
     ax = axd["E"]
-    setup_context_map(ax, UA_BBOX, countries={"Ukraine", "UA"})
+    setup_basic_map(ax, UA_BBOX)
     # Backdrop: real countrywide MCC 255 report density (0.1-deg bins, log-scaled).
     if not ukraine_all.empty:
         weights = np.log10(ukraine_all["obs"].clip(lower=1) + 1)
@@ -396,6 +409,18 @@ def main() -> None:
     parser.add_argument("--preview", type=Path, default=None)
     args = parser.parse_args()
     data = load_data()
+    exports = {
+        "lima_replay_observations.csv": data["lima"],
+        "lima_replay_location_counts.csv": data["clone_counts"],
+        "lima_replay_monthly_locations.csv": data["timeline"],
+        "lima_replay_paired_identities.csv": data["paired"],
+        "lima_replay_home_identities.csv": data["ua_home_pts"],
+        "lima_ukraine_reference_density.csv": data["ukraine_all"],
+    }
+    data_output = ROOT / "data" / "spoofing"
+    data_output.mkdir(parents=True, exist_ok=True)
+    for filename, frame in exports.items():
+        frame.to_csv(data_output / filename, index=False, date_format="%Y-%m-%d %H:%M:%S")
     make_figure(data, args.output, args.preview)
     print(args.output)
 

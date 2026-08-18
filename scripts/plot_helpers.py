@@ -30,15 +30,24 @@ TILE_SOURCES = {
     "osm": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     "carto_light": "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
     "carto_light_nolabels": "https://basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
+    "carto_light_only_labels": "https://basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
     "carto_voyager": "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
     "carto_voyager_nolabels": "https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png",
+    "carto_voyager_nolabels_retina": "https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png",
+    # Contours, hillshade, and terrain colouring derived from SRTM, with OSM
+    # roads and place context.  A higher zoom is used for publication maps so
+    # the source pixels match the raster export instead of being enlarged.
+    "opentopomap": "https://tile.opentopomap.org/{z}/{x}/{y}.png",
 }
 TILE_ATTRIBUTION = {
     "osm": r"Basemap \copyright{} OpenStreetMap contributors",
     "carto_light": r"Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO",
     "carto_light_nolabels": r"Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO",
+    "carto_light_only_labels": r"Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO",
     "carto_voyager": r"Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO",
     "carto_voyager_nolabels": r"Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO",
+    "carto_voyager_nolabels_retina": r"Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO",
+    "opentopomap": r"Map data \copyright{} OpenStreetMap contributors; map style \copyright{} OpenTopoMap (CC-BY-SA); elevation: SRTM",
 }
 
 
@@ -295,8 +304,9 @@ def _load_osm_tile(x: int, y: int, zoom: int, source: str = "osm") -> Image.Imag
     # Cache per source: the styles differ, so they cannot share a directory.
     root = OSM_CACHE if source == "osm" else OSM_CACHE.with_name(f"tiles_{source}")
     path = root / str(zoom) / str(x) / f"{y}.png"
+    mode = "RGBA" if source.endswith("only_labels") else "RGB"
     if path.exists():
-        return Image.open(path).convert("RGB")
+        return Image.open(path).convert(mode)
     url = TILE_SOURCES[source].format(z=zoom, x=x, y=y)
     req = Request(url, headers={"User-Agent": "cell-geolocation-paper/0.1 (research plotting)"})
     try:
@@ -306,7 +316,7 @@ def _load_osm_tile(x: int, y: int, zoom: int, source: str = "osm") -> Image.Imag
         return None
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
-    return Image.open(path).convert("RGB")
+    return Image.open(path).convert(mode)
 
 
 def add_osm_basemap(
@@ -318,6 +328,8 @@ def add_osm_basemap(
     grayscale: bool = True,
     zorder: int = 0,
     source: str = "osm",
+    grayscale_brightness: float = 1.08,
+    grayscale_contrast: float = 0.82,
 ) -> bool:
     """Draw cached OpenStreetMap raster tiles under a lon/lat plot.
 
@@ -336,8 +348,8 @@ def add_osm_basemap(
             if img is None:
                 continue
             if grayscale:
-                img = ImageEnhance.Brightness(img.convert("L").convert("RGB")).enhance(1.08)
-                img = ImageEnhance.Contrast(img).enhance(0.82)
+                img = ImageEnhance.Brightness(img.convert("L").convert("RGB")).enhance(grayscale_brightness)
+                img = ImageEnhance.Contrast(img).enhance(grayscale_contrast)
             lon_w, lon_e, lat_s, lat_n = _tile_bounds(x, y, zoom)
             ax.imshow(img, extent=(lon_w, lon_e, lat_s, lat_n), origin="upper", alpha=alpha, zorder=zorder)
             drawn = True

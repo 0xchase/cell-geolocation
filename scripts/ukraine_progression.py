@@ -97,11 +97,13 @@ NBINS = round((LON1 - LON0) / DLON)
 _LAT_SPAN = NBINS * DLAT
 BBOX = (LON0, LON1, LAT_MID - _LAT_SPAN / 2, LAT_MID + _LAT_SPAN / 2)
 
-NCOLS = 3                          # 2024-2026 in a single row
+NCOLS = 4                          # Ukraine 2024-2026 plus collection-wide Georgia
 # 2023 is Nov-Dec only: two months against twelve, which is not comparable on a
 # shared scale and made the first panel look like a collapse in coverage.
 DROP_YEARS = {2023}
 FIG_W = 7.0                        # USENIX two-column \linewidth, in inches
+GEORGIA_PANEL = FIGS / "georgia_russia_density.png"
+GEORGIA_SUMMARY = ROOT / "data" / "out-of-country" / "additional-cases" / "georgia-russia-density-summary.csv"
 
 # Sequential, single hue per operator, light -> dark and monotonic in lightness.
 # Identity is carried by the row label and the ramp hue; magnitude by lightness.
@@ -402,20 +404,28 @@ def emit_tex(panels: dict, years: list[int], totals: pd.DataFrame,
     # exclude `}` -- a second closing brace later on the same line (from an
     # enclosing \shortstack) gets swallowed into the captured filename, and make
     # then tries to build `<name>.png}.eps`.
-    for r in range(0, len(years), NCOLS):
-        row = years[r:r + NCOLS]
-        lines.append(" & ".join(
-            rf"\small\textbf{{{year_label(y, totals)}}}" for y in row) + r" \\")
-        for i, y in enumerate(row):
-            n = {k: int(totals.loc[totals["yr"] == y, k].iloc[0]) for k, _ in OPERATORS}
-            note = (rf"\scriptsize {n['ru']:,} RU \textbar{{}} {n['ua']:,} UA"
-                    rf" \textbar{{}} {n['sat']:,} D2C").replace(",", "{,}")
-            sep = "&" if i < len(row) - 1 else r"\\"
-            lines += [
-                r"\shortstack{%",
-                rf"\includegraphics[width={colw}\linewidth]{{{panels[y]['path'].name}}}%",
-                rf"\\[-1pt] {note}}} {sep}",
-            ]
+    lines.append(" & ".join(
+        [*(rf"\small\textbf{{{year_label(y, totals)}}}" for y in years),
+         r"\small\textbf{Georgia (collection)}"]
+    ) + r" \\")
+    for y in years:
+        n = {k: int(totals.loc[totals["yr"] == y, k].iloc[0]) for k, _ in OPERATORS}
+        note = (rf"\scriptsize {n['ru']:,} RU \textbar{{}} {n['ua']:,} UA"
+                rf" \textbar{{}} {n['sat']:,} D2C").replace(",", "{,}")
+        lines += [
+            r"\shortstack{%",
+            rf"\includegraphics[width={colw}\linewidth]{{{panels[y]['path'].name}}}%",
+            rf"\\[-1pt] {note}}} &",
+        ]
+    georgia = pd.read_csv(GEORGIA_SUMMARY)
+    ge_ru = int(georgia.loc[georgia["group"].str.startswith("Russian"), "cells"].iloc[0])
+    ge_local = int(georgia.loc[georgia["group"].str.startswith("Georgian"), "cells"].iloc[0])
+    ge_note = (rf"\scriptsize {ge_ru:,} RU \textbar{{}} {ge_local:,} GE").replace(",", "{,}")
+    lines += [
+        r"\shortstack{%",
+        rf"\includegraphics[width={colw}\linewidth]{{{GEORGIA_PANEL.name}}}%",
+        rf"\\[-1pt] {ge_note}}} \\",
+    ]
     lines.append(r"\end{tabular}")
 
     # Decade ticks at log10(v)/log10(vmax) along the strip, as fractions of
@@ -439,7 +449,7 @@ def emit_tex(panels: dict, years: list[int], totals: pd.DataFrame,
     ] + [
         line
         for key, label in OPERATORS
-        for line in (rf"\scriptsize {label} &",
+        for line in (rf"\scriptsize {('Domestic terrestrial (MCC 255/282)' if key == 'ua' else label)} &",
                      rf"\includegraphics[width={cb}\linewidth,height=5pt]{{{name}_cbar_{key}.png}}%",
                      r"\\")
     ] + [
@@ -448,17 +458,14 @@ def emit_tex(panels: dict, years: list[int], totals: pd.DataFrame,
         r"}",
         r"\par\vspace{2pt}",
         r"{\scriptsize Distinct cells per " + f"{CELL_KM:g}" +
-        r"\,km square bin (log scale, shared by all three networks and all "
-        + f"{len(years)}" + r" panels); each bin takes the hue of whichever"
+        r"\,km square bin (log scale, shared by all networks and all 4 panels); each bin takes the hue of whichever"
         r" network has the most cells in it.\quad"
-        r"\rule[0.15em]{1.4em}{1pt}~Documented front}",
+        r"\rule[0.15em]{1.4em}{1pt}~Documented front (Ukraine)}",
         r"",
         # Required by the tile licence.
         (rf"{{\scriptsize {TILE_ATTRIBUTION[BASEMAP]}}}" if BASEMAP else ""),
         r"",
-        r"    \caption{Density of distinct Russian, Ukrainian and Kyivstar",
-        r"    Direct-to-Cell satellite cells across Ukraine, by year, on one",
-        r"    shared scale, against the documented front.}",
+        r"    \caption{Density of distinct Russian, domestic, and Kyivstar Direct-to-Cell identities across Ukraine by year and Georgia collection-wide, on one shared scale.}",
         r"    \label{fig:ukraine-progression}",
         r"\end{figure*}",
     ]
