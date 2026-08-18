@@ -8,7 +8,6 @@ from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 
@@ -57,12 +56,10 @@ def configure_style() -> None:
 def load_data() -> dict[str, pd.DataFrame]:
     return {
         "lima": pd.read_csv(DATA / "lima_replay_observations.csv", parse_dates=["timestamp"]),
-        "counts": pd.read_csv(DATA / "lima_replay_location_counts.csv"),
         "timeline": pd.read_csv(
             DATA / "lima_replay_monthly_locations.csv", parse_dates=["month"]
         ),
         "homes": pd.read_csv(DATA / "lima_replay_home_identities.csv"),
-        "ukraine": pd.read_csv(DATA / "lima_ukraine_reference_density.csv"),
     }
 
 
@@ -127,51 +124,30 @@ def draw_lima(ax: plt.Axes, lima: pd.DataFrame) -> None:
         facecolor="white", edgecolor="none", framealpha=0.78,
         fontsize=4.1, handletextpad=0.2, columnspacing=0.5, borderpad=0.25,
     )
-    ax.set_title("A. Lima neighborhood cluster", loc="left", pad=2)
+    attribution = TILE_ATTRIBUTION["carto_voyager"].replace(r"\copyright{}", "©")
+    ax.text(
+        0.99, 0.01, attribution, transform=ax.transAxes,
+        ha="right", va="bottom", fontsize=3.2, color="#666666",
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.70, "pad": 0.3},
+        zorder=6,
+    )
+    ax.set_box_aspect(1)
+    ax.set_title("Lima", loc="left", pad=2)
 
 
-def draw_ukraine(ax: plt.Axes, homes: pd.DataFrame, ukraine: pd.DataFrame) -> None:
+def draw_ukraine(ax: plt.Axes, homes: pd.DataFrame) -> None:
     setup_country_map(ax, UA_BBOX)
-    weights = np.log10(ukraine.obs.clip(lower=1) + 1)
-    ax.scatter(
-        ukraine.lon_bin, ukraine.lat_bin, s=0.4 + weights * 0.65,
-        color="#686868", alpha=0.22, edgecolor="none", rasterized=True, zorder=2,
+    draw_geojson_layer(
+        ax, COUNTRIES, UA_BBOX, countries={"Ukraine", "UKR"},
+        facecolor="#dceaf4", edgecolor="#456f89", linewidth=0.65, zorder=1,
     )
     for operator, group in homes.groupby("operator"):
         ax.scatter(
             group.lon, group.lat, s=5.5, color=PALETTE.get(operator, "#777777"),
             alpha=0.82, edgecolor="white", linewidth=0.18, rasterized=True, zorder=3,
         )
-    ax.text(
-        0.985, 0.025, "grey: all MCC 255 reports\ncolored: Lima identities at home",
-        transform=ax.transAxes, ha="right", va="bottom", fontsize=4.2,
-        bbox={"facecolor": "white", "edgecolor": "#bdb7ae", "linewidth": 0.3,
-              "alpha": 0.80, "pad": 1.2},
-        zorder=4,
-    )
-    ax.set_title("B. Ukrainian home footprint", loc="left", pad=2)
-
-
-def draw_counts(ax: plt.Axes, counts: pd.DataFrame) -> None:
-    order = [name for name in ["Lima replay", "Ukraine home"] if name in set(counts.location)]
-    counts = counts.set_index("location").loc[order].reset_index()
-    labels = ["Lima", "Ukraine\nhome"]
-    bars = ax.bar(
-        labels, counts.obs,
-        color=[LOCATION_COLORS[name] for name in counts.location], width=0.62,
-    )
-    ax.set_yscale("log")
-    ax.set_ylim(1_000, counts.obs.max() * 3.2)
-    for bar, row in zip(bars, counts.itertuples(index=False), strict=True):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2, row.obs * 1.13,
-            f"{row.obs:,}\n{row.identities:,} IDs",
-            ha="center", va="bottom", fontsize=4.5,
-        )
-    ax.grid(axis="y", color="#d7d9dc", linewidth=0.4, zorder=-1)
-    ax.set_ylabel("Reports (log scale)")
-    ax.set_title("C. Home/Lima report ratio", loc="left", pad=2)
     ax.set_box_aspect(1)
+    ax.set_title("Ukraine", loc="left", pad=2)
 
 
 def draw_timeline(ax: plt.Axes, timeline: pd.DataFrame) -> None:
@@ -181,7 +157,8 @@ def draw_timeline(ax: plt.Axes, timeline: pd.DataFrame) -> None:
             continue
         ax.plot(
             group.month, group.identities, marker="o", markersize=2.2,
-            linewidth=1.0, color=LOCATION_COLORS[location], label=location,
+            linewidth=1.0, color=LOCATION_COLORS[location],
+            label={"Ukraine home": "Ukraine", "Lima replay": "Lima"}[location],
         )
     ax.set_yscale("log")
     ax.set_ylabel("Distinct identities (log)")
@@ -195,36 +172,20 @@ def draw_timeline(ax: plt.Axes, timeline: pd.DataFrame) -> None:
         edgecolor="none", framealpha=0.78, fontsize=4.4,
         handlelength=1.3, handletextpad=0.3, columnspacing=0.7,
     )
-    onset = timeline[
-        timeline.location.eq("Lima replay") & timeline.identities.ge(50)
-    ]
-    if not onset.empty:
-        first = onset.month.min()
-        ax.axvline(first, color=LOCATION_COLORS["Lima replay"], linestyle="--",
-                   linewidth=0.7, alpha=0.75)
-        ax.annotate(
-            f"ramp begins\n{first:%b %Y}", xy=(first, 55), xytext=(-4, 5),
-            textcoords="offset points", ha="right", va="bottom",
-            fontsize=4.4, color=LOCATION_COLORS["Lima replay"],
-        )
-    ax.set_title("D. Monthly onset", loc="left", pad=2)
-    ax.set_box_aspect(1)
+    ax.set_title("Observations", loc="left", pad=2)
 
 
 def render() -> None:
     configure_style()
     data = load_data()
-    fig = plt.figure(figsize=(3.35, 3.75))
+    fig = plt.figure(figsize=(3.35, 2.95))
     grid = fig.add_gridspec(
-        2, 2, left=0.10, right=0.99, bottom=0.085, top=0.975,
-        hspace=0.34, wspace=0.28,
+        2, 2, left=0.06, right=0.995, bottom=0.085, top=0.975,
+        height_ratios=[1.0, 0.55], hspace=0.18, wspace=0.07,
     )
     draw_lima(fig.add_subplot(grid[0, 0]), data["lima"])
-    draw_ukraine(fig.add_subplot(grid[0, 1]), data["homes"], data["ukraine"])
-    draw_counts(fig.add_subplot(grid[1, 0]), data["counts"])
-    draw_timeline(fig.add_subplot(grid[1, 1]), data["timeline"])
-    attribution = TILE_ATTRIBUTION["carto_voyager"].replace(r"\copyright{}", "©")
-    fig.text(0.985, 0.012, attribution, ha="right", fontsize=3.8, color="#666666")
+    draw_ukraine(fig.add_subplot(grid[0, 1]), data["homes"])
+    draw_timeline(fig.add_subplot(grid[1, :]), data["timeline"])
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(OUTPUT, dpi=600, bbox_inches="tight")
     fig.savefig(OUTPUT.with_suffix(".png"), dpi=450, bbox_inches="tight")

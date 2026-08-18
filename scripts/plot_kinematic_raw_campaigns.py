@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "spoofing" / "remaining_search"
 FIGS = ROOT / "paper" / "figs"
 WORLD = ROOT / "data" / "reference" / "ne_10m_admin_0_map_units.geojson"
-OUTPUT = FIGS / "kinematic_raw_campaigns.pdf"
+OUTPUT = FIGS / "kinematic_raw_campaigns_appendix.pdf"
+KIN01_OUTPUT = FIGS / "kinematic_raw_campaign_01.pdf"
 KEY = ["mcc", "mnc", "lac", "cid", "cell_type"]
 EARTH_KM = 6371.0088
 
@@ -239,11 +240,42 @@ def draw_timeline(ax: plt.Axes, group: pd.DataFrame, colors) -> None:
     )
 
 
+def render_single_campaign(campaign, group: pd.DataFrame, rings) -> None:
+    """Render the strongest campaign as a compact main-paper figure."""
+    colors = operator_colors(group)
+    fig = plt.figure(figsize=(7.15, 2.15))
+    grid = fig.add_gridspec(
+        1, 2, width_ratios=[0.90, 1.42],
+        left=0.055, right=0.99, bottom=0.20, top=0.84, wspace=0.18,
+    )
+    draw_map(fig.add_subplot(grid[0, 0]), group, colors, rings)
+    draw_timeline(fig.add_subplot(grid[0, 1]), group, colors)
+    identities = group[KEY].drop_duplicates().shape[0]
+    operators = group[["mcc", "mnc"]].drop_duplicates().shape[0]
+    fig.text(
+        0.055, 0.94,
+        f"{campaign.campaign_id} · {identities} identities; "
+        f"max {int(campaign.maximum_daily_identities)}/day; "
+        f"{operators} PLMNs; min |Δt| {int(group.gap_seconds.min())} s",
+        ha="left", va="top", fontsize=8.0, fontweight="bold", color="#2f3134",
+    )
+    attribution = TILE_ATTRIBUTION[BASEMAP].replace(r"\copyright{}", "©")
+    fig.text(0.99, 0.025, attribution, ha="right", fontsize=4.4, color=MUTED)
+    KIN01_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(KIN01_OUTPUT, dpi=600, bbox_inches="tight")
+    fig.savefig(KIN01_OUTPUT.with_suffix(".png"), dpi=450, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[figure] {KIN01_OUTPUT.relative_to(ROOT)}")
+
+
 def render() -> None:
     configure_style()
     campaigns, groups = load_campaign_pairs()
     rings = load_world(WORLD)
-    fig = plt.figure(figsize=(7.15, 9.15))
+    strongest = campaigns[campaigns.campaign_id.eq("KIN-01")].iloc[0]
+    render_single_campaign(strongest, groups["KIN-01"], rings)
+    campaigns = campaigns[~campaigns.campaign_id.eq("KIN-01")].reset_index(drop=True)
+    fig = plt.figure(figsize=(7.15, 7.45))
     grid = fig.add_gridspec(
         len(campaigns), 2, width_ratios=[0.93, 1.32],
         left=0.055, right=0.99, bottom=0.045, top=0.975,
