@@ -21,7 +21,7 @@ DATA = ROOT / "data" / "spoofing" / "remaining_search"
 FIGS = ROOT / "paper" / "figs"
 WORLD = ROOT / "data" / "reference" / "ne_10m_admin_0_map_units.geojson"
 OUTPUT = FIGS / "kinematic_raw_campaigns_appendix.pdf"
-KIN01_OUTPUT = FIGS / "kinematic_raw_campaign_01.pdf"
+VIETNAM_OUTPUT = FIGS / "vietnam_coordinated_displacement.pdf"
 KEY = ["mcc", "mnc", "lac", "cid", "cell_type"]
 EARTH_KM = 6371.0088
 
@@ -30,6 +30,9 @@ DESTINATION = "#b43b48"
 GRID = "#d7d9dc"
 MUTED = "#676b70"
 BASEMAP = "carto_voyager"
+PUBLICATION_BASEMAP = "carto_light_nolabels"
+SOURCE = "#2b6f93"
+PAIR = "#89939a"
 
 
 def configure_style() -> None:
@@ -240,40 +243,119 @@ def draw_timeline(ax: plt.Axes, group: pd.DataFrame, colors) -> None:
     )
 
 
-def render_single_campaign(campaign, group: pd.DataFrame, rings) -> None:
-    """Render the strongest campaign as a compact main-paper figure."""
-    colors = operator_colors(group)
-    fig = plt.figure(figsize=(7.15, 2.15))
+def draw_publication_map(ax: plt.Axes, group: pd.DataFrame, rings) -> None:
+    """Show the geography without exposing internal campaign terminology."""
+    bbox = map_bbox(group)
+    used_tiles = add_osm_basemap(
+        ax, bbox, zoom=basemap_zoom(bbox), alpha=1.0,
+        grayscale=False, zorder=0, source=PUBLICATION_BASEMAP,
+    )
+    if not used_tiles:
+        setup_map(ax, rings, bbox)
+    for row in group.itertuples(index=False):
+        ax.plot(
+            [row.home_lon, row.away_lon], [row.home_lat, row.away_lat],
+            color=PAIR, linewidth=0.50, alpha=0.16, zorder=2,
+        )
+    ax.scatter(
+        group.home_lon, group.home_lat, s=11, color=SOURCE,
+        edgecolor="white", linewidth=0.35, alpha=0.86, zorder=3,
+    )
+    destination_lon = float(group.away_lon.median())
+    destination_lat = float(group.away_lat.median())
+    ax.scatter(
+        destination_lon, destination_lat, s=34, marker="D", color=DESTINATION,
+        edgecolor="white", linewidth=0.55, zorder=5,
+    )
+    ax.annotate(
+        "Common destination", (destination_lon, destination_lat),
+        xytext=(7, -9), textcoords="offset points", ha="left", va="top",
+        fontsize=5.2, fontweight="bold", color=DESTINATION,
+        arrowprops={"arrowstyle": "-", "color": DESTINATION, "linewidth": 0.55},
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 0.6},
+        zorder=6,
+    )
+    source_lon = float(group.home_lon.median())
+    source_lat = float(group.home_lat.median())
+    ax.annotate(
+        "Source locations", (source_lon, source_lat),
+        xytext=(8, 3), textcoords="offset points", ha="left", va="bottom",
+        fontsize=5.0, fontweight="bold", color=SOURCE,
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.72, "pad": 0.5},
+        zorder=6,
+    )
+    ax.set_xlim(bbox[0], bbox[1])
+    ax.set_ylim(bbox[2], bbox[3])
+    center_lat = (bbox[2] + bbox[3]) / 2
+    ax.set_aspect(1 / math.cos(math.radians(center_lat)), adjustable="box")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_color("#8c8984")
+        spine.set_linewidth(0.45)
+    ax.set_title("Northern Vietnam", loc="left", pad=3)
+
+
+def draw_publication_timeline(ax: plt.Axes, group: pd.DataFrame) -> None:
+    """Show repeated source and destination observations without timing claims."""
+    ax.scatter(
+        group.home_timestamp, group.distance_km, s=12, color=SOURCE,
+        edgecolor="white", linewidth=0.3, alpha=0.88, zorder=3,
+    )
+    ax.scatter(
+        group.away_timestamp, np.zeros(len(group)), s=9, color=DESTINATION,
+        edgecolor="white", linewidth=0.3, alpha=0.90, zorder=4,
+    )
+    first_day = min(group.home_timestamp.min(), group.away_timestamp.min()).normalize()
+    last_day = max(group.home_timestamp.max(), group.away_timestamp.max()).normalize()
+    days = pd.date_range(first_day, last_day, freq="D")
+    ticks = days + pd.Timedelta(hours=17)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([f"Sep {day.day}" for day in days])
+    ax.set_xlim(ticks[0] - pd.Timedelta(hours=8), ticks[-1] + pd.Timedelta(hours=8))
+    ax.set_ylim(-5, group.distance_km.max() * 1.10)
+    ax.axhline(0, color=DESTINATION, linewidth=0.75, alpha=0.45, zorder=1)
+    ax.grid(color=GRID, linewidth=0.42, zorder=-1)
+    ax.set_ylabel("Distance from common destination (km)")
+    ax.set_xlabel("Observation time (UTC)")
+    ax.set_title("The same identities appear at sources and destination", loc="left", pad=3)
+    handles = [
+        Line2D([0], [0], marker="o", linestyle="", markersize=3.4,
+               markerfacecolor=SOURCE, markeredgecolor="white", markeredgewidth=0.3,
+               label="Source"),
+        Line2D([0], [0], marker="o", linestyle="", markersize=3.4,
+               markerfacecolor=DESTINATION, markeredgecolor="white", markeredgewidth=0.3,
+               label="Common destination"),
+    ]
+    ax.legend(
+        handles=handles, loc="upper left", ncol=2, frameon=True,
+        facecolor="white", edgecolor="none", framealpha=0.82,
+        fontsize=4.8, handletextpad=0.3, columnspacing=0.8, borderpad=0.3,
+    )
+def render_single_campaign(group: pd.DataFrame, rings) -> None:
+    """Render the selected Vietnam case as a compact main-paper figure."""
+    fig = plt.figure(figsize=(7.15, 2.35))
     grid = fig.add_gridspec(
-        1, 2, width_ratios=[0.90, 1.42],
-        left=0.055, right=0.99, bottom=0.20, top=0.84, wspace=0.18,
+        1, 2, width_ratios=[0.84, 1.56],
+        left=0.045, right=0.99, bottom=0.20, top=0.93, wspace=0.15,
     )
-    draw_map(fig.add_subplot(grid[0, 0]), group, colors, rings)
-    draw_timeline(fig.add_subplot(grid[0, 1]), group, colors)
-    identities = group[KEY].drop_duplicates().shape[0]
-    operators = group[["mcc", "mnc"]].drop_duplicates().shape[0]
-    fig.text(
-        0.055, 0.94,
-        f"{campaign.campaign_id} · {identities} identities; "
-        f"max {int(campaign.maximum_daily_identities)}/day; "
-        f"{operators} PLMNs; min |Δt| {int(group.gap_seconds.min())} s",
-        ha="left", va="top", fontsize=8.0, fontweight="bold", color="#2f3134",
-    )
-    attribution = TILE_ATTRIBUTION[BASEMAP].replace(r"\copyright{}", "©")
+    draw_publication_map(fig.add_subplot(grid[0, 0]), group, rings)
+    draw_publication_timeline(fig.add_subplot(grid[0, 1]), group)
+    attribution = TILE_ATTRIBUTION[PUBLICATION_BASEMAP].replace(r"\copyright{}", "©")
     fig.text(0.99, 0.025, attribution, ha="right", fontsize=4.4, color=MUTED)
-    KIN01_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(KIN01_OUTPUT, dpi=600, bbox_inches="tight")
-    fig.savefig(KIN01_OUTPUT.with_suffix(".png"), dpi=450, bbox_inches="tight")
+    VIETNAM_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(VIETNAM_OUTPUT, dpi=600, bbox_inches="tight")
+    fig.savefig(VIETNAM_OUTPUT.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
-    print(f"[figure] {KIN01_OUTPUT.relative_to(ROOT)}")
+    print(f"[figure] {VIETNAM_OUTPUT.relative_to(ROOT)}")
 
 
 def render() -> None:
     configure_style()
     campaigns, groups = load_campaign_pairs()
     rings = load_world(WORLD)
-    strongest = campaigns[campaigns.campaign_id.eq("KIN-01")].iloc[0]
-    render_single_campaign(strongest, groups["KIN-01"], rings)
+    render_single_campaign(groups["KIN-01"], rings)
     campaigns = campaigns[~campaigns.campaign_id.eq("KIN-01")].reset_index(drop=True)
     fig = plt.figure(figsize=(7.15, 7.45))
     grid = fig.add_gridspec(

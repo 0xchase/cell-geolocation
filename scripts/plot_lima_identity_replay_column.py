@@ -139,7 +139,7 @@ def draw_ukraine(ax: plt.Axes, homes: pd.DataFrame) -> None:
     setup_country_map(ax, UA_BBOX)
     draw_geojson_layer(
         ax, COUNTRIES, UA_BBOX, countries={"Ukraine", "UKR"},
-        facecolor="#dceaf4", edgecolor="#456f89", linewidth=0.65, zorder=1,
+        facecolor="#f3e4c4", edgecolor="#8f6a35", linewidth=0.65, zorder=1,
     )
     for operator, group in homes.groupby("operator"):
         ax.scatter(

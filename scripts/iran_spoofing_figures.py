@@ -30,6 +30,7 @@ WORLD = ROOT / "data" / "reference" / "ne_10m_admin_0_map_units.geojson"
 
 ASALUYEH_DATA = DATA / "iran_asaluyeh_foreign_identities.csv"
 CAMPAIGN_DATA = DATA / "iran_coordinate_displacement_members.csv"
+DOMESTIC_ACTIVITY_DATA = DATA / "iran_domestic_campaign_activity.csv"
 CONTEXT_DATA = DATA / "iran_event_context.csv"
 ASALUYEH_FIG = FIGS / "iran_asaluyeh_spoofing.pdf"
 DOMESTIC_FIG = FIGS / "iran_domestic_spoofing.pdf"
@@ -37,6 +38,7 @@ DOMESTIC_FIG = FIGS / "iran_domestic_spoofing.pdf"
 INK = "#222426"
 MUTED = "#686d70"
 GRID = "#d7d9da"
+SOURCE = "#276c99"
 DESTINATION = "#b4232f"
 COUNTRY_COLORS = {
     "QA": "#6f4aa8",
@@ -71,6 +73,13 @@ CAMPAIGNS = {
         "destination": "Tehran",
         "title": "Aug. 27–Sep. 7, 2025",
     },
+}
+
+ACTIVITY_WINDOWS = {
+    "mashhad_tehran_apr2024": ("2024-01-01", "2024-12-01"),
+    "kazerun_tehran_jun2025": ("2025-03-01", "2025-10-01"),
+    "mashhad_tehran_aug2025": ("2025-06-01", "2025-12-01"),
+    "mashhad_kermanshah": ("2025-03-01", "2026-07-15"),
 }
 
 
@@ -150,6 +159,83 @@ def export_domestic_campaigns() -> pd.DataFrame:
         raise RuntimeError(f"Domestic campaign membership changed: {actual} != {expected}")
     result.to_csv(CAMPAIGN_DATA, index=False)
     return result
+
+
+def _identity_tuples(group: pd.DataFrame) -> str:
+    key = ["mcc", "mnc", "lac", "cid", "cell_type"]
+    rows = group[key].drop_duplicates()
+    return ",".join(
+        f"({int(row.mcc)},{int(row.mnc)},{int(row.lac)},{int(row.cid)},'{row.cell_type}')"
+        for row in rows.itertuples(index=False)
+    )
+
+
+def refresh_domestic_activity(
+    campaigns: pd.DataFrame,
+    replay: pd.DataFrame,
+) -> pd.DataFrame:
+    """Read weekly endpoint participation for the four plotted cohorts."""
+    frames: list[pd.DataFrame] = []
+    groups = {
+        campaign_id: campaigns[campaigns["campaign_id"].eq(campaign_id)].copy()
+        for campaign_id in CAMPAIGNS
+    }
+    groups["mashhad_kermanshah"] = replay.copy()
+    for campaign_id, group in groups.items():
+        replay_case = campaign_id == "mashhad_kermanshah"
+        source_lat_col = "home_lat" if replay_case else "reference_lat"
+        source_lon_col = "home_lon" if replay_case else "reference_lon"
+        destination_lat_col = "destination_lat" if replay_case else "top_destination_lat"
+        destination_lon_col = "destination_lon" if replay_case else "top_destination_lon"
+        source_lat = float(group[source_lat_col].median())
+        source_lon = float(group[source_lon_col].median())
+        destination_lat = float(group[destination_lat_col].median())
+        destination_lon = float(group[destination_lon_col].median())
+        # The Kermanshah cohort's stable locations span the Mashhad metro area;
+        # the other source and destination clusters are much tighter.
+        radius_km = 80 if replay_case else 35
+        start, end = ACTIVITY_WINDOWS[campaign_id]
+        identities = _identity_tuples(group)
+        frame = ch_df(f"""
+          WITH
+            greatCircleDistance(lon,lat,{source_lon},{source_lat})/1000 AS source_km,
+            greatCircleDistance(lon,lat,{destination_lon},{destination_lat})/1000 AS destination_km,
+            if(source_km <= destination_km, 'source', 'destination') AS endpoint
+          SELECT
+            toStartOfWeek(timestamp, 1) AS week,
+            endpoint,
+            uniqExact((mcc,mnc,lac,cid,cell_type)) AS identities,
+            count() AS observations
+          FROM cell.geos
+          PREWHERE (mcc,mnc,lac,cid,cell_type) IN ({identities})
+          WHERE timestamp >= toDateTime('{start}')
+            AND timestamp < toDateTime('{end}')
+            AND lat BETWEEN -90 AND 90 AND lon BETWEEN -180 AND 180
+            AND NOT (abs(lat) <= 0.01 AND abs(lon) <= 0.01)
+            AND least(source_km, destination_km) <= {radius_km}
+          GROUP BY week, endpoint
+          ORDER BY week, endpoint
+        """, settings={"max_threads": 6})
+        if frame.empty:
+            raise RuntimeError(f"No endpoint activity found for {campaign_id}")
+        frame.insert(0, "campaign_id", campaign_id)
+        frame.insert(3, "cohort_size", len(group))
+        frame.insert(4, "source_name", "Mashhad" if replay_case else CAMPAIGNS[campaign_id]["source"])
+        frame.insert(5, "destination_name", "Kermanshah" if replay_case else CAMPAIGNS[campaign_id]["destination"])
+        frames.append(frame)
+        print(f"{campaign_id}: {len(group)} identities, {len(frame)} weekly endpoint rows")
+    result = pd.concat(frames, ignore_index=True)
+    result["week"] = pd.to_datetime(result["week"])
+    result.to_csv(DOMESTIC_ACTIVITY_DATA, index=False)
+    return result
+
+
+def load_domestic_activity() -> pd.DataFrame:
+    if not DOMESTIC_ACTIVITY_DATA.exists():
+        raise FileNotFoundError(
+            f"{DOMESTIC_ACTIVITY_DATA} is missing; rerun with --refresh-domestic-activity"
+        )
+    return pd.read_csv(DOMESTIC_ACTIVITY_DATA, parse_dates=["week"])
 
 
 def load_inputs(
@@ -408,21 +494,17 @@ def domestic_case(
     fig: plt.Figure,
     outer,
     group: pd.DataFrame,
+    activity: pd.DataFrame,
     rings,
-    panel: str,
     dates: str,
     source_name: str,
     destination_name: str,
     *,
     replay: bool = False,
 ) -> None:
-    inner = outer.subgridspec(
-        2, 2, width_ratios=[1.12, 0.88], height_ratios=[1, 1],
-        wspace=0.12, hspace=0.33,
-    )
-    ax_map = fig.add_subplot(inner[:, 0])
-    ax_source = fig.add_subplot(inner[0, 1])
-    ax_destination = fig.add_subplot(inner[1, 1])
+    inner = outer.subgridspec(1, 2, width_ratios=[0.88, 1.50], wspace=0.17)
+    ax_map = fig.add_subplot(inner[0, 0])
+    ax_activity = fig.add_subplot(inner[0, 1])
     if replay:
         source_lon_col, source_lat_col = "home_lon", "home_lat"
         destination_lon_col, destination_lat_col = "destination_lon", "destination_lat"
@@ -444,17 +526,26 @@ def domestic_case(
     ax_map.set_aspect(1 / np.cos(np.deg2rad(32.5)), adjustable="box")
     curved_arrow(ax_map, (source_lon, source_lat), (destination_lon, destination_lat))
     ax_map.scatter(
-        [source_lon], [source_lat], s=34, facecolor="white", edgecolor=INK,
-        linewidth=0.85, zorder=6,
+        group[source_lon_col], group[source_lat_col], s=7, facecolor=SOURCE,
+        edgecolor="white", linewidth=0.25, alpha=0.48, zorder=5,
     )
     ax_map.scatter(
-        [destination_lon], [destination_lat], s=48, marker="*",
+        [source_lon], [source_lat], s=30, facecolor=SOURCE, edgecolor="white",
+        linewidth=0.65, zorder=6,
+    )
+    ax_map.scatter(
+        group[destination_lon_col], group[destination_lat_col], s=7,
+        facecolor=DESTINATION, edgecolor="white", linewidth=0.25,
+        alpha=0.48, zorder=5,
+    )
+    ax_map.scatter(
+        [destination_lon], [destination_lat], s=38, marker="D",
         facecolor=DESTINATION, edgecolor="white", linewidth=0.6, zorder=7,
     )
     ax_map.annotate(
         source_name, (source_lon, source_lat), xytext=(3, 4),
         textcoords="offset points", fontsize=5.3, fontweight="bold",
-        color=INK, bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 0.5},
+        color=SOURCE, bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 0.5},
         zorder=8,
     )
     ax_map.annotate(
@@ -465,47 +556,49 @@ def domestic_case(
         zorder=8,
     )
     ax_map.set_title(
-        f"{panel}. {source_name} → {destination_name}\n{dates}",
+        f"{source_name} to {destination_name}\n{dates}",
         loc="left", fontsize=7.0, fontweight="bold", color=INK, pad=2.5,
     )
     ax_map.text(
         0.02, 0.02,
-        f"{len(group)} identities · {observations:,} observations\n"
-        f"{distance:,.0f} km · {operator_counts(group)}",
+        f"{len(group)} identities · {distance:,.0f} km",
         transform=ax_map.transAxes, fontsize=4.8, color=INK, va="bottom",
         bbox={"facecolor": "white", "edgecolor": "#babdc0", "linewidth": 0.35,
               "alpha": 0.92, "pad": 1.2}, zorder=9,
     )
-    ax_map.set_xticks([45, 50, 55, 60])
-    ax_map.set_yticks([25, 30, 35, 40])
-    ax_map.tick_params(labelsize=4.2, length=1.3, pad=0.6)
+    ax_map.set_xticks([])
+    ax_map.set_yticks([])
     ax_map.set_xlabel("")
     ax_map.set_ylabel("")
 
-    source_bbox = cluster_inset(
-        ax_source, group, source_lon_col, source_lat_col, "source",
+    campaign_id = str(activity["campaign_id"].iloc[0])
+    start, end = map(pd.Timestamp, ACTIVITY_WINDOWS[campaign_id])
+    weekly = activity.pivot(index="week", columns="endpoint", values="identities")
+    monday_start = start - pd.Timedelta(days=start.weekday())
+    all_weeks = pd.date_range(monday_start, end, freq="W-MON")
+    weekly = weekly.reindex(all_weeks, fill_value=0).fillna(0)
+    styles = [("source", source_name, SOURCE), ("destination", destination_name, DESTINATION)]
+    for endpoint, label, color in styles:
+        values = weekly[endpoint] if endpoint in weekly else pd.Series(0, index=weekly.index)
+        ax_activity.plot(
+            weekly.index, values, color=color, linewidth=1.25,
+            marker="o", markersize=2.1, markeredgecolor="white",
+            markeredgewidth=0.25, label=label, zorder=3,
+        )
+    ax_activity.set_xlim(start, end)
+    ax_activity.set_ylim(-0.8, len(group) + max(2.5, len(group) * 0.10))
+    ax_activity.set_ylabel("Distinct identities observed per week")
+    ax_activity.set_xlabel("Observation week")
+    ax_activity.grid(color=GRID, linewidth=0.45, zorder=-2)
+    locator = mdates.AutoDateLocator(minticks=4, maxticks=7)
+    ax_activity.xaxis.set_major_locator(locator)
+    ax_activity.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    ax_activity.set_title("Weekly activity at each location", loc="left", pad=3)
+    ax_activity.legend(
+        loc="upper right", ncol=2, frameon=True, facecolor="white",
+        edgecolor="none", framealpha=0.82, fontsize=4.8,
+        handletextpad=0.35, columnspacing=0.8,
     )
-    destination_bbox = cluster_inset(
-        ax_destination, group, destination_lon_col, destination_lat_col, "destination",
-    )
-    for bbox, color in [(source_bbox, INK), (destination_bbox, DESTINATION)]:
-        ax_map.add_patch(Rectangle(
-            (bbox[0], bbox[2]), bbox[1] - bbox[0], bbox[3] - bbox[2],
-            facecolor="none", edgecolor=color, linewidth=0.6,
-            linestyle=(0, (2, 1.5)), zorder=5,
-        ))
-    # Explicitly connect the national-scale anchors to their magnifications.
-    # A line rather than an arrow avoids implying a second displacement.
-    for point, inset, color in [
-        ((source_lon, source_lat), ax_source, INK),
-        ((destination_lon, destination_lat), ax_destination, DESTINATION),
-    ]:
-        fig.add_artist(ConnectionPatch(
-            xyA=point, coordsA=ax_map.transData, axesA=ax_map,
-            xyB=(0.0, 0.5), coordsB=inset.transAxes, axesB=inset,
-            arrowstyle="-", linewidth=0.75, linestyle=(0, (2.2, 1.5)),
-            color=color, alpha=0.72, zorder=3, clip_on=False,
-        ))
 
 
 def render_event_timeline(ax: plt.Axes, context: pd.DataFrame) -> None:
@@ -699,44 +792,39 @@ def render_context_timeline(ax: plt.Axes, context: pd.DataFrame) -> None:
 def render_domestic(
     campaigns: pd.DataFrame,
     replay: pd.DataFrame,
-    context: pd.DataFrame,
+    activity: pd.DataFrame,
     output: Path,
 ) -> None:
     rings = load_world(WORLD)
-    fig = plt.figure(figsize=(7.15, 6.75))
+    fig = plt.figure(figsize=(7.15, 8.15))
     grid = fig.add_gridspec(
-        3, 2, height_ratios=[1.0, 1.0, 0.78],
-        left=0.025, right=0.992, bottom=0.055, top=0.975,
-        wspace=0.11, hspace=0.23,
+        4, 1,
+        left=0.045, right=0.992, bottom=0.045, top=0.982,
+        hspace=0.32,
     )
     order = [
-        ("mashhad_tehran_apr2024", "A"),
-        ("kazerun_tehran_jun2025", "B"),
-        ("mashhad_tehran_aug2025", "C"),
+        "mashhad_tehran_apr2024",
+        "kazerun_tehran_jun2025",
+        "mashhad_tehran_aug2025",
     ]
-    for outer, (campaign_id, panel) in zip([grid[0, 0], grid[0, 1], grid[1, 0]], order):
+    for outer, campaign_id in zip([grid[0, 0], grid[1, 0], grid[2, 0]], order):
         spec = CAMPAIGNS[campaign_id]
         group = campaigns[campaigns["campaign_id"].eq(campaign_id)]
         domestic_case(
-            fig, outer, group, rings, panel, spec["title"], spec["source"],
+            fig, outer, group,
+            activity[activity["campaign_id"].eq(campaign_id)],
+            rings, spec["title"], spec["source"],
             spec["destination"],
         )
     domestic_case(
-        fig, grid[1, 1], replay, rings, "D", "Jun.–Aug. 2025; recurs Jun. 2026",
+        fig, grid[3, 0], replay,
+        activity[activity["campaign_id"].eq("mashhad_kermanshah")],
+        rings, "Jun.–Aug. 2025; recurs Jun. 2026",
         "Mashhad", "Kermanshah", replay=True,
     )
-    timeline_grid = grid[2, :].subgridspec(
-        2, 1, height_ratios=[0.40, 0.45], hspace=0.62,
-    )
-    render_event_timeline(fig.add_subplot(timeline_grid[0, 0]), context)
-    context_ax = fig.add_subplot(timeline_grid[1, 0])
-    render_context_timeline(context_ax, context)
     fig.text(
-        0.99, 0.010,
-        "Magnified dots are unjittered at reported coordinates (0.01° source precision); "
-        "coincident identities overplot\n"
-        "OpenTopoMap / OSM / SRTM · Natural Earth",
-        ha="right", va="bottom",
+        0.045, 0.010, "Boundaries: Natural Earth",
+        ha="left", va="bottom",
         fontsize=4.4, color=MUTED,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -751,13 +839,21 @@ def main() -> None:
         "--refresh", action="store_true",
         help="Refresh the Asaluyeh CSV through the read-only database connection.",
     )
+    parser.add_argument(
+        "--refresh-domestic-activity", action="store_true",
+        help="Refresh weekly activity for the four domestic cohorts through the read-only database connection.",
+    )
     parser.add_argument("--asaluyeh-output", type=Path, default=ASALUYEH_FIG)
     parser.add_argument("--domestic-output", type=Path, default=DOMESTIC_FIG)
     args = parser.parse_args()
     configure_style()
     asaluyeh, campaigns, replay, context = load_inputs(args.refresh)
+    if args.refresh_domestic_activity:
+        domestic_activity = refresh_domestic_activity(campaigns, replay)
+    else:
+        domestic_activity = load_domestic_activity()
     render_asaluyeh(asaluyeh, args.asaluyeh_output)
-    render_domestic(campaigns, replay, context, args.domestic_output)
+    render_domestic(campaigns, replay, domestic_activity, args.domestic_output)
     print(args.asaluyeh_output)
     print(args.domestic_output)
 

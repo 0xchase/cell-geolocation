@@ -155,7 +155,8 @@ def refresh_trajectories(members: pd.DataFrame) -> pd.DataFrame:
         group = select_members(members, spec)
         refs = _reference_tuples(group)
         identities = _identity_tuples(group)
-        start = group["onset_ts"].min().floor("D") - pd.Timedelta(days=7)
+        lookback_days = 100 if key == "pakistan" else 7
+        start = group["onset_ts"].min().floor("D") - pd.Timedelta(days=lookback_days)
         end = group["destination_last"].max().ceil("D") + pd.Timedelta(days=7)
         frame = ch_df(f"""
           WITH refs AS (
@@ -358,6 +359,144 @@ def render_single(
     plt.close(fig)
 
 
+def draw_pakistan_map(
+    ax: plt.Axes, rings, group: pd.DataFrame, spec: Campaign,
+) -> None:
+    """Render the actual Islamabad source footprint and common destination."""
+    bbox = (65.0, 119.0, 21.0, 40.5)
+    setup_map(ax, rings, bbox)
+    source_lat = group["rlat"] / 100
+    source_lon = group["rlon"] / 100
+    destination_lat = group["top_plat"] / 100
+    destination_lon = group["top_plon"] / 100
+    source_center = (float(source_lon.median()), float(source_lat.median()))
+    destination_center = (float(destination_lon.median()), float(destination_lat.median()))
+
+    arrow = FancyArrowPatch(
+        source_center, destination_center, arrowstyle="-|>",
+        connectionstyle="arc3,rad=-0.10", mutation_scale=8,
+        linewidth=1.2, color=MUTED, alpha=0.72, zorder=3,
+    )
+    ax.add_patch(arrow)
+    ax.scatter(
+        source_lon, source_lat, s=8, color=SOURCE, alpha=0.55,
+        edgecolors="white", linewidths=0.25, zorder=4,
+    )
+    ax.scatter(
+        *source_center, s=28, color=SOURCE, edgecolors="white",
+        linewidths=0.6, zorder=5,
+    )
+    ax.scatter(
+        destination_lon, destination_lat, s=8, color=DESTINATION, alpha=0.55,
+        edgecolors="white", linewidths=0.25, zorder=4,
+    )
+    ax.scatter(
+        *destination_center, s=38, marker="D", color=DESTINATION,
+        edgecolors="white", linewidths=0.6, zorder=5,
+    )
+    ax.annotate(
+        "Islamabad sources", source_center, xytext=(5, 7),
+        textcoords="offset points", fontsize=5.4, color=SOURCE,
+        fontweight="bold", zorder=6,
+    )
+    ax.annotate(
+        "Common destination\nChangsha", destination_center, xytext=(-5, -8),
+        textcoords="offset points", ha="right", va="top", fontsize=5.4,
+        color=DESTINATION, fontweight="bold", zorder=6,
+    )
+    midpoint = (
+        (source_center[0] + destination_center[0]) / 2,
+        (source_center[1] + destination_center[1]) / 2 + 0.45,
+    )
+    ax.text(
+        *midpoint,
+        f"{haversine_km(spec.source_lat, spec.source_lon, spec.destination_lat, spec.destination_lon):,.0f} km",
+        ha="center", va="bottom", fontsize=5.0, color=MUTED,
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 0.5},
+        zorder=6,
+    )
+    for text, lon, lat in [
+        ("PAKISTAN", 69.5, 30.5), ("INDIA", 79.0, 24.5), ("CHINA", 102.0, 35.3)
+    ]:
+        ax.text(
+            lon, lat, text, ha="center", va="center", fontsize=5.0,
+            color="#7c8083", fontweight="bold", alpha=0.75, zorder=2,
+        )
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.set_title("Islamabad to Changsha", loc="left", pad=3)
+
+
+def draw_pakistan_activity(
+    ax: plt.Axes, trajectory: pd.DataFrame, spec: Campaign,
+) -> None:
+    """Show cohort participation at each endpoint without an empty 4,000 km axis."""
+    key = ["mcc", "mnc", "lac", "cid", "cell_type"]
+    route_km = haversine_km(
+        spec.source_lat, spec.source_lon, spec.destination_lat, spec.destination_lon
+    )
+    frame = trajectory.copy()
+    frame["location"] = np.where(
+        frame["displacement_km"].gt(route_km / 2), "Changsha", "Islamabad"
+    )
+    frame["week"] = frame["timestamp"].dt.to_period("W-MON").dt.start_time
+    weekly = (
+        frame[["week", "location", *key]].drop_duplicates()
+        .groupby(["week", "location"]).size().unstack(fill_value=0)
+        .reindex(columns=["Islamabad", "Changsha"], fill_value=0)
+    )
+    styles = {"Islamabad": SOURCE, "Changsha": DESTINATION}
+    for location in ["Islamabad", "Changsha"]:
+        ax.plot(
+            weekly.index, weekly[location], color=styles[location],
+            linewidth=1.25, marker="o", markersize=2.2,
+            markeredgecolor="white", markeredgewidth=0.25,
+            label=location, zorder=3,
+        )
+    context_start = trajectory["timestamp"].min().normalize().replace(day=1)
+    ax.set_xlim(context_start, pd.Timestamp("2025-10-05"))
+    ax.set_ylim(-2, 75)
+    ax.set_ylabel("Distinct identities observed per week")
+    ax.set_xlabel("Observation week")
+    ax.grid(color=GRID, linewidth=0.45, zorder=-2)
+    locator = mdates.MonthLocator(interval=2)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+    ax.set_title("Weekly activity at each location", loc="left", pad=3)
+    ax.legend(
+        loc="upper right", ncol=2, frameon=True, facecolor="white",
+        edgecolor="none", framealpha=0.82, fontsize=4.8,
+        handletextpad=0.35, columnspacing=0.8,
+    )
+
+
+def render_pakistan(
+    members: pd.DataFrame, trajectory_data: pd.DataFrame, rings, output: Path,
+) -> None:
+    spec = CAMPAIGNS["pakistan"]
+    group = select_members(members, spec)
+    trajectory = trajectory_data[trajectory_data["campaign"].eq(spec.key)].copy()
+    if trajectory.empty:
+        raise RuntimeError("No trajectory points found for pakistan")
+    fig = plt.figure(figsize=(7.15, 2.15))
+    grid = fig.add_gridspec(
+        1, 2, width_ratios=[0.90, 1.50],
+        left=0.045, right=0.99, bottom=0.20, top=0.92, wspace=0.17,
+    )
+    draw_pakistan_map(fig.add_subplot(grid[0, 0]), rings, group, spec)
+    draw_pakistan_activity(fig.add_subplot(grid[0, 1]), trajectory, spec)
+    fig.text(
+        0.045, 0.02, "Boundaries: Natural Earth", ha="left", va="bottom",
+        fontsize=4.3, color=MUTED,
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output)
+    fig.savefig(output.with_suffix(".png"), dpi=500)
+    plt.close(fig)
+
+
 def render_iran(
     members: pd.DataFrame, trajectory_data: pd.DataFrame, rings, output: Path,
 ) -> None:
@@ -434,12 +573,7 @@ def main() -> None:
     else:
         trajectory_data = load_trajectories()
     rings = load_world(WORLD)
-    render_single(
-        members, trajectory_data, rings, CAMPAIGNS["pakistan"], FIGS / "pakistan_changsha_campaign.pdf",
-        (65.0, 119.0, 21.0, 40.5),
-        [("PAKISTAN", 69.5, 30.5), ("INDIA", 79.0, 24.5), ("CHINA", 102.0, 35.3),
-         ("Himalayas", 84.0, 31.5)],
-    )
+    render_pakistan(members, trajectory_data, rings, FIGS / "pakistan_changsha_campaign.pdf")
     render_iran(members, trajectory_data, rings, FIGS / "iran_controlled_campaigns.pdf")
     render_single(
         members, trajectory_data, rings, CAMPAIGNS["moscow"], FIGS / "moscow_crimea_campaign.pdf",
