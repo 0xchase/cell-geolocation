@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from geopolitical_defense_maps import compact_footer
 from military_defense_maps import (
     CATEGORY_COLORS,
     DATA,
@@ -25,6 +25,20 @@ ROOT = Path(__file__).resolve().parents[1]
 FIGS = ROOT / "paper" / "figs"
 
 
+def compact_grouped_footer(rows: list[dict[str, object]]) -> str:
+    """Keep multi-PLMN labels legible in reduced multi-panel figures."""
+    categories = "/".join(sorted({str(row["category"]) for row in rows}))
+    networks: dict[int, set[int]] = defaultdict(set)
+    for row in rows:
+        networks[int(row["mcc"])].add(int(row["mnc"]))
+    labels = []
+    for mcc, mncs in sorted(networks.items()):
+        ordered = sorted(mncs)
+        mnc_label = str(ordered[0]) if len(ordered) == 1 else "{" + ",".join(map(str, ordered)) + "}"
+        labels.append(f"{mcc:03d}/{mnc_label}")
+    return f"{categories}: {', '.join(labels)} · n={len(rows):,} · {sum(int(row['obs']) for row in rows):,} obs"
+
+
 def spec(
     title: str,
     place: str,
@@ -39,9 +53,20 @@ def spec(
 # The four main-paper testing/unassigned cases requested by the authors.
 MAIN_ANOMALOUS = [
     spec("DGA Landes · Missile Test Range", "Nouvelle-Aquitaine · France", [("Unassigned", 9, 9)], (-1.275, -1.210, 44.405, 44.457), "R3234655", 14),
-    spec("Tesla Gigafactory Berlin · Automobile Factory", "Brandenburg · Germany", [("Private", 999, 40)], (13.783, 13.819, 52.387, 52.407), "W775978799", 15),
+    spec("Idaho National Laboratory · Wireless Test Range", "Idaho · United States", [("Testing", 1, 1), ("Unassigned", 103, 10)], (-113.140, -112.920, 43.515, 43.570), None, 13),
     spec("Porton Down · Defence Laboratory", "England · United Kingdom", [("Testing", 1, 1)], (-1.711, -1.692, 51.1295, 51.1402), "W28121567", 15),
     spec("Stockbridge · Experimental Facility", "New York · United States", [("Testing", 1, 1)], (-75.663, -75.640, 43.0250, 43.0445), "W1289150743", 15),
+]
+
+
+# Commercial sites where unusual MCC activity can disclose the existence,
+# extent, or persistence of private infrastructure and sensitive testing.
+# Ordered by country, then site.
+MAIN_COMMERCIAL = [
+    spec("Cadia · Gold and Copper Mine", "New South Wales · Australia", [("Private", 999, 50), ("Private", 999, 99)], (148.975, 149.065, -33.560, -33.445), None, 13),
+    spec("Tesla Gigafactory Berlin · Automobile Factory", "Brandenburg · Germany", [("Private", 999, 40)], (13.783, 13.819, 52.387, 52.407), "W775978799", 15),
+    spec("Applus+ IDIADA · Automotive Proving Ground", "Catalonia · Spain", [("Private", 999, 10)], (1.493, 1.541, 41.257, 41.275), "W33790449", 14),
+    spec("Point Beach · Nuclear Power Plant", "Wisconsin · United States", [("Private", 999, 40)], (-87.541, -87.532, 44.276, 44.284), "W109774222", 16),
 ]
 
 
@@ -118,13 +143,14 @@ def legend_handles(categories: set[str]):
 def render(specs, output: Path, preview: Path, title: str, rows: int, cols: int = 4) -> None:
     rows_by_category = load_all_rows()
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8, "axes.titleweight": "bold", "pdf.fonttype": 42, "ps.fonttype": 42})
+    column_figure = cols <= 2
     column_quad = rows == 2 and cols == 2
-    width = 3.35 if column_quad else 13.8
-    height = 3.62 if column_quad else 2.82 * rows + 0.75
+    width = 3.35 if column_figure else 13.8
+    height = (3.05 if rows == 1 and cols == 1 else 3.62) if column_figure else 2.82 * rows + 0.75
     fig, axes = plt.subplots(rows, cols, figsize=(width, height), squeeze=False)
-    bottom = 0.105 if column_quad else 0.065
-    top = 0.94 if column_quad else 0.91
-    fig.subplots_adjust(left=0.025, right=0.992, top=top, bottom=bottom, wspace=0.08 if column_quad else 0.11, hspace=0.17 if column_quad else 0.31)
+    bottom = 0.12 if rows == 1 and cols == 1 else (0.105 if column_quad else 0.065)
+    top = 0.92 if rows == 1 and cols == 1 else (0.94 if column_quad else 0.91)
+    fig.subplots_adjust(left=0.025, right=0.992, top=top, bottom=bottom, wspace=0.08 if column_figure else 0.11, hspace=0.17 if column_figure else 0.31)
     if title:
         fig.suptitle(title, fontsize=7.4 if column_quad else 13.3, fontweight="bold", y=0.975)
     categories: set[str] = set()
@@ -138,30 +164,31 @@ def render(specs, output: Path, preview: Path, title: str, rows: int, cols: int 
             ax,
             selected,
             fit_bbox_to_panel(bbox),
-            f"{chr(65 + index)}. {panel_title}\n{place}",
+            f"{chr(65 + index) + '. ' if len(specs) > 1 else ''}{panel_title}\n{place}",
             osm_id,
             zoom=zoom,
-            footer_text=compact_footer(selected),
-            title_fontsize=4.7 if column_quad else 7.15,
-            footer_fontsize=3.65 if column_quad else 5.25,
+            footer_text=compact_grouped_footer(selected),
+            title_fontsize=6.1 if rows == 1 and cols == 1 else (4.7 if column_quad else 7.15),
+            footer_fontsize=4.4 if rows == 1 and cols == 1 else (3.65 if column_quad else 5.25),
         )
     for ax in axes.flat[len(specs):]:
         ax.set_visible(False)
     handles = legend_handles(categories)
-    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.025, 0.006), ncol=3 if column_quad else len(handles), frameon=False, fontsize=4.5 if column_quad else 6.2, handletextpad=0.3, columnspacing=0.55 if column_quad else 0.8)
-    fig.text(0.99, 0.010, "Imagery © Esri and contributors · boundaries/labels © OpenStreetMap contributors, © CARTO", ha="right", va="bottom", fontsize=3.25 if column_quad else 5.55, color="#666666")
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.025, 0.006), ncol=3 if column_figure else len(handles), frameon=False, fontsize=4.5 if column_figure else 6.2, handletextpad=0.3, columnspacing=0.55 if column_figure else 0.8)
+    fig.text(0.99, 0.010, "Imagery © Esri and contributors · boundaries/labels © OpenStreetMap contributors, © CARTO", ha="right", va="bottom", fontsize=3.25 if column_figure else 5.55, color="#666666")
     output.parent.mkdir(parents=True, exist_ok=True)
     # Appendix grids use a double-width source canvas and are reduced by about
     # half in the paper; column quads are exported at their final physical size.
-    pdf_dpi = 300 if column_quad else 180
+    pdf_dpi = 300 if column_figure else 180
     fig.savefig(output, dpi=pdf_dpi, bbox_inches="tight")
-    fig.savefig(preview, dpi=180 if column_quad else 160, bbox_inches="tight")
+    fig.savefig(preview, dpi=180 if column_figure else 160, bbox_inches="tight")
     plt.close(fig)
 
 
 def main() -> None:
     jobs = [
         (MAIN_ANOMALOUS, FIGS / "military_defense_mcc_maps.pdf", FIGS / "military_defense_mcc_maps.png", "", 2, 2),
+        (MAIN_COMMERCIAL, FIGS / "tesla_gigafactory_private_mcc_map.pdf", FIGS / "tesla_gigafactory_private_mcc_map.png", "", 2, 2),
         (MAIN_FOREIGN, FIGS / "geopolitical_defense_mcc_maps.pdf", FIGS / "geopolitical_defense_mcc_maps.png", "", 2, 2),
         (APPENDIX_ANOMALOUS, FIGS / "test_mcc_defense_appendix_maps.pdf", FIGS / "test_mcc_defense_appendix_maps.png", "Additional testing, unassigned, and private MCC identities at defense-related facilities", math.ceil(len(APPENDIX_ANOMALOUS) / 4), 4),
         (APPENDIX_FOREIGN, FIGS / "foreign_mcc_defense_appendix_maps.pdf", FIGS / "foreign_mcc_defense_appendix_maps.png", "Additional foreign MCC identities at military sites", math.ceil(len(APPENDIX_FOREIGN) / 4), 4),

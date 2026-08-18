@@ -161,7 +161,7 @@ def draw_timeline(ax: plt.Axes, timeline: pd.DataFrame) -> None:
             label={"Ukraine home": "Ukraine", "Lima replay": "Lima"}[location],
         )
     ax.set_yscale("log")
-    ax.set_ylabel("Distinct identities (log)")
+    ax.set_ylabel("Cohort identities (log)")
     ax.grid(color="#d7d9dc", linewidth=0.4, zorder=-1)
     locator = mdates.MonthLocator(interval=6)
     ax.xaxis.set_major_locator(locator)
@@ -172,7 +172,7 @@ def draw_timeline(ax: plt.Axes, timeline: pd.DataFrame) -> None:
         edgecolor="none", framealpha=0.78, fontsize=4.4,
         handlelength=1.3, handletextpad=0.3, columnspacing=0.7,
     )
-    ax.set_title("Observations", loc="left", pad=2)
+    ax.set_title("Same-identity observations", loc="left", pad=2)
 
 
 def render() -> None:

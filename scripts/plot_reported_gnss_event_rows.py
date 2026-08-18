@@ -43,6 +43,13 @@ class EventPlot:
     destination_name: str
     period: str
     markers: tuple[tuple[str, str], ...] = ()
+    map_title: str | None = None
+    activity_title: str = "Weekly activity of the same identities"
+    source_legend: str | None = None
+    destination_legend: str | None = None
+    display_end: str | None = None
+    summary_note: str | None = None
+    continuation_note: str | None = None
 
 
 STRONG = (
@@ -52,13 +59,24 @@ STRONG = (
     ),
     EventPlot(
         "moscow_nov2024", "Moscow", "Sheremetyevo", "November 2024",
-        (("2024-11-20", "Moscow-region\ndrone alert"),
-         ("2025-05-07", "Later May 2025\nepisode")),
+        (("2024-11-20", "Moscow-region\ndrone alert"),),
+        map_title="November 2024\ntransient update",
+        activity_title="Apple-returned coordinates: short-lived November episode",
+        source_legend="Original Moscow estimate",
+        destination_legend="Sheremetyevo-directed estimate",
+        display_end="2025-03-31",
+        summary_note="Most affected identities return within days",
     ),
     EventPlot(
         "moscow_may2025", "Moscow", "Sheremetyevo", "May 2025",
         (("2025-05-07", "GNSS escalation\nreported"),
          ("2025-05-09", "Victory Day")),
+        map_title="May 2025 CPS\nlandmark migration",
+        activity_title="Apple-returned landmark state (not RF-transmitter duration)",
+        source_legend="Original Moscow estimate",
+        destination_legend="Sheremetyevo-directed estimate",
+        summary_note="Identities migrate one-way during May",
+        continuation_note="Updated CPS state persists\nthrough the plotted window",
     ),
 )
 
@@ -173,6 +191,10 @@ def refresh_weekly(
         end = (
             pd.Timestamp(event.screen_end) + pd.Timedelta(weeks=CONTEXT_WEEKS_AFTER, days=1)
         ).strftime("%Y-%m-%d")
+        event_start = pd.Timestamp(event.screen_start).strftime("%Y-%m-%d")
+        map_destination_end = (
+            pd.Timestamp(event.screen_end) + pd.Timedelta(days=15)
+        ).strftime("%Y-%m-%d")
         query = f"""
         WITH
           greatCircleDistance(lon,lat,{source_lon:.8f},{source_lat:.8f})/1000 AS source_km,
@@ -222,8 +244,17 @@ def refresh_weekly(
           AND timestamp < toDateTime('{end}')
           AND lat BETWEEN -90 AND 90 AND lon BETWEEN -180 AND 180
           AND NOT (abs(lat) <= 0.01 AND abs(lon) <= 0.01)
-          AND ((endpoint = 'source' AND source_km <= {source_radius:.3f})
-            OR (endpoint = 'destination' AND destination_km <= {destination_radius:.3f}))
+          -- Map the original estimate before the event and the newly returned
+          -- estimate during/just after it.  Aggregating the entire context
+          -- window would make the November map silently depict the distinct
+          -- May 2025 migration instead.
+          AND ((endpoint = 'source'
+                AND source_km <= {source_radius:.3f}
+                AND timestamp < toDateTime('{event_start}'))
+            OR (endpoint = 'destination'
+                AND destination_km <= {destination_radius:.3f}
+                AND timestamp >= toDateTime('{event_start}')
+                AND timestamp < toDateTime('{map_destination_end}')))
         GROUP BY endpoint, mcc, mnc, lac, cid, cell_type
         ORDER BY endpoint, mcc, mnc, lac, cid, cell_type
         """
@@ -319,7 +350,7 @@ def draw_main_map(
     )
     distance = haversine_km(source[0], source[1], destination[0], destination[1])
     ax.set_title(
-        f"{spec.source_name} to {spec.destination_name}\n{spec.period}",
+        spec.map_title or f"{spec.source_name} to {spec.destination_name}\n{spec.period}",
         loc="left", fontweight="bold", pad=2,
     )
     ax.text(
@@ -400,6 +431,8 @@ def draw_activity(ax: plt.Axes, spec: EventPlot, activity: pd.DataFrame) -> None
     weekly = sub.pivot(index="week", columns="endpoint", values="identities").fillna(0)
     window_start = pd.Timestamp(sub.window_start.iloc[0])
     window_end = pd.Timestamp(sub.window_end.iloc[0])
+    if spec.display_end is not None:
+        window_end = min(window_end, pd.Timestamp(spec.display_end))
     monday_start = window_start - pd.Timedelta(days=window_start.weekday())
     monday_end = window_end - pd.Timedelta(days=window_end.weekday())
     all_weeks = pd.date_range(monday_start, monday_end, freq="W-MON")
@@ -407,9 +440,9 @@ def draw_activity(ax: plt.Axes, spec: EventPlot, activity: pd.DataFrame) -> None
     source = weekly.get("source", pd.Series(0, index=weekly.index))
     destination = weekly.get("destination", pd.Series(0, index=weekly.index))
     ax.bar(weekly.index, source, width=5.6, color=BLUE, edgecolor="white", linewidth=0.35,
-           label=spec.source_name, zorder=3)
+           label=spec.source_legend or spec.source_name, zorder=3)
     ax.bar(weekly.index, -destination, width=5.6, color=RED, edgecolor="white", linewidth=0.35,
-           label=spec.destination_name, zorder=3)
+           label=spec.destination_legend or spec.destination_name, zorder=3)
     ax.axhline(0, color=INK, linewidth=0.75, zorder=4)
     peak = max(float(source.max()), float(destination.max()), 1.0)
     step = max(5, int(math.ceil(peak / 4 / 5) * 5))
@@ -418,13 +451,13 @@ def draw_activity(ax: plt.Axes, spec: EventPlot, activity: pd.DataFrame) -> None
     ax.set_ylim(-limit * 1.06, limit * 1.06)
     ax.set_yticks(ticks, [str(abs(int(value))) for value in ticks])
     ax.set_xlim(all_weeks.min() - pd.Timedelta(days=5), all_weeks.max() + pd.Timedelta(days=5))
-    ax.set_ylabel("Distinct identities per week", labelpad=0.5)
+    ax.set_ylabel("Cohort identities per week", labelpad=0.5)
     ax.set_xlabel("Observation week")
     ax.grid(axis="y", color=GRID, linewidth=0.45, zorder=-2)
     locator = mdates.AutoDateLocator(minticks=4, maxticks=7)
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
-    ax.set_title("Weekly activity at each location", loc="left", pad=3)
+    ax.set_title(spec.activity_title, loc="left", pad=3)
     ax.legend(
         loc="upper right", ncol=2, frameon=True, facecolor="white",
         edgecolor="none", framealpha=0.84, fontsize=4.8,
@@ -442,11 +475,22 @@ def draw_activity(ax: plt.Axes, spec: EventPlot, activity: pd.DataFrame) -> None
             bbox={"facecolor": "white", "edgecolor": "#8f9599",
                   "linewidth": 0.75, "alpha": 0.95, "pad": 0.75}, zorder=7,
         )
+    if spec.summary_note is not None:
+        ax.text(
+            0.015, 0.035, spec.summary_note,
+            transform=ax.transAxes, ha="left", va="bottom",
+            fontsize=4.5, color=INK,
+            bbox={"facecolor": "white", "edgecolor": "#9a9fa2",
+                  "linewidth": 0.55, "alpha": 0.94, "pad": 0.8}, zorder=8,
+        )
     cohort_size = int(sub.cohort_size.iloc[0])
-    if float(destination.tail(4).mean()) >= max(3.0, 0.10 * cohort_size):
+    continuation_note = spec.continuation_note
+    if continuation_note is None and float(destination.tail(4).mean()) >= max(3.0, 0.10 * cohort_size):
+        continuation_note = "Destination activity continues\nthrough plotted window"
+    if continuation_note is not None:
         ax.text(
             0.985, 0.035,
-            "Destination activity continues\nthrough plotted window",
+            continuation_note,
             transform=ax.transAxes, ha="right", va="bottom",
             fontsize=4.4, color=RED,
             bbox={"facecolor": "white", "edgecolor": "#9a9fa2",

@@ -194,6 +194,10 @@ def refresh_domestic_activity(
     }
     groups["mashhad_kermanshah"] = replay.copy()
     for campaign_id, group in groups.items():
+        if not group["mcc"].eq(432).all():
+            raise RuntimeError(f"{campaign_id} contains non-Iranian MCC identities")
+        if group[["mcc", "mnc", "lac", "cid", "cell_type"]].duplicated().any():
+            raise RuntimeError(f"{campaign_id} contains duplicate identity keys")
         replay_case = campaign_id == "mashhad_kermanshah"
         source_lat_col = "home_lat" if replay_case else "reference_lat"
         source_lon_col = "home_lon" if replay_case else "reference_lon"
@@ -624,13 +628,13 @@ def domestic_case(
     ax_activity.set_yticks(ticks, [str(abs(int(value))) for value in ticks])
     ax_activity.set_xlim(all_weeks.min() - pd.Timedelta(days=5),
                          all_weeks.max() + pd.Timedelta(days=5))
-    ax_activity.set_ylabel("Distinct identities per week", labelpad=0.5)
+    ax_activity.set_ylabel("Cohort identities per week", labelpad=0.5)
     ax_activity.set_xlabel("Observation week")
     ax_activity.grid(axis="y", color=GRID, linewidth=0.45, zorder=-2)
     locator = mdates.AutoDateLocator(minticks=4, maxticks=7)
     ax_activity.xaxis.set_major_locator(locator)
     ax_activity.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
-    ax_activity.set_title("Weekly activity at each location", loc="left", pad=3)
+    ax_activity.set_title("Weekly activity of the same identities", loc="left", pad=3)
     ax_activity.legend(
         loc="upper right", ncol=2, frameon=True, facecolor="white",
         edgecolor="none", framealpha=0.82, fontsize=4.8,

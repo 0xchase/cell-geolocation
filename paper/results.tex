@@ -8,7 +8,7 @@ cumulative number of cellular identifiers discovered over time.
 
 % {{ Number of cells geolocated by technology
 
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
     \includegraphics[width=\linewidth]{cumulative-tech.pdf}
     \caption{Cumulative number of geolocated cells over time, geolocated
@@ -33,13 +33,41 @@ cumulative number of cellular identifiers discovered over time.
     \end{tabular}
 \end{table}
 
-\subsection{Testing, Internal, and Non-Existent \acp{MCC}}
+\subsection{Mapping Private Infrastructure}
 
-The \ac{ITU} \ac{MCC} assignments reserve certain \acp{MCC} for use in network
-testing (MCC 001) and for use in internal or private networks (MCC
-999)~\cite{ITU-OB-1156-2018}. Further, \acp{MCC} beginning with ``1'' or ``8''
-are not assigned by the \ac{ITU}.  Our data includes many examples of base
-stations assigned one of these MCCs. 
+We found a large corpus of testing (MCCs 001 and 991), private (MCC 999), and
+unassigned MCCs described in \S\ref{sec:background} in our dataset. Canonically,
+testing MCCs support experimental networks, private MCCs identify infrastructure
+intended for internal use, and unassigned MCCs define no purpose. However, our
+results show that all three types can reveal the locations and characteristics
+of potentially private infrastructure and activities.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{tesla_gigafactory_private_mcc_map.pdf}
+    \caption{Testing and private MCC identities reveal sensitive commercial infrastructure and activities.}
+    \label{fig:commercial-sensitive-mcc-maps}
+\end{figure}
+
+Figure~\ref{fig:commercial-sensitive-mcc-maps} shows that the same exposure extends to commercial and
+critical infrastructure. Private MCC identities delineate networks at the Cadia mine (11 LTE identities;
+5,334 observations), Tesla Gigafactory Berlin (20 NR identities; 8,865 observations), the Applus+ IDIADA
+automotive proving ground (11 GSM/UMTS identities; 4,622 observations), and Point Beach Nuclear Plant (four
+NR identities; 760 observations). These records reveal not only the presence of internal cellular systems,
+but also their technology generation, physical footprint, and persistence—information that may disclose
+facility capabilities, testing activity, or operational changes. Thus, even when an MCC is correctly used
+for a private network, making its observations globally discoverable creates a privacy and security risk
+for the organization operating it.
+
+Figure~\ref{fig:military-defense-mcc-maps} demonstrates that atypical MCCs can act as signatures of
+otherwise non-public infrastructure. We observe an unassigned 009/09 NR identity at the DGA Landes missile
+test range (578 observations), testing and unassigned identities at Idaho National Laboratory (five
+identities; 1,033 observations), six testing 001/01 LTE identities at Porton Down (688 observations), and
+five testing 001/01 LTE and NR identities at Stockbridge (1,215 observations). Their repeated observation
+and spatial concentration within research and defense facilities reveal the location, radio technology, and
+approximate extent of networks that may have been intended only for local or experimental use. Although
+these associations do not establish network ownership or purpose, they show that globally collected
+cellular metadata can expose sensitive infrastructure without requiring access to subscriber traffic.
 
 \begin{figure}[t]
     \centering
@@ -48,12 +76,23 @@ stations assigned one of these MCCs.
     \label{fig:military-defense-mcc-maps}
 \end{figure}
 
+
 \subsection{Out-of-Country \acp{MCC}}
+
+
+Valid nationally assigned MCC can be still be a signature of adversarial
+activity when it appears outside the country that administers it. Although some
+mismatches arise from legacy allocations or identifier aliasing, spatially
+concentrated mismatches can be a side effect of private or sensitive sites and
+activities. We analyzed a variety of examples where out-of-country MCC placement
+could be used to discover unusual operator activity.
 
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{out_of_country_mcc_matrix.pdf}
-    \caption{Out-of-country cellular identities more than 25\,km beyond their assigned \ac{MCC} territory concentrate in a small number of located-country and MCC-country pairs.}
+    \caption{Out-of-country cellular identities more than 25\,km beyond their
+    assigned \ac{MCC} territory concentrate in a small number of located-country
+    and MCC-country pairs.}
     \label{fig:out-of-country-mcc-matrix}
 \end{figure*}
 
@@ -66,41 +105,98 @@ stations assigned one of these MCCs.
 
 \FloatBarrier
 
+\subsection{GNSS Spoofing}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{attributable_spoofing_movements.pdf}
+    \caption{Stored cell positions move toward Queen Alia, Sheremetyevo, two alternating targets near Vladimir, and a recurring Changsha endpoint for Islamabad identities~\cite{opsgroup-spoofing-report,spire-moscow-gnss-2025,pakistan-aip-s69-24,pakistan-gnss-icao,changsha-gps-interference}.}
+    \label{fig:attributable-spoofing-movements}
+\end{figure*}
+
+\noindent\begin{minipage}[t]{\columnwidth}
+    \centering
+    \includegraphics[width=\columnwidth]{lima_identity_replay_column.pdf}
+    \captionof{figure}{The same 668 identities observed across Ukraine later concentrate in one Lima neighborhood.}
+    \label{fig:lima-identity-replay}
+\end{minipage}
+
+\begin{figure*}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{iran_domestic_spoofing.pdf}
+    \caption{Four fixed Iranian identity cohorts shift between paired locations alongside independently reported context~\cite{iran-attack-apr2024,iran-gnss-war-report,iran-blackout-2025,digiato-snapp-gps,dod-midnight-hammer,idf-kermanshah-strike,iran-gps-acknowledgment,iran-gps-drone-threat,marad-gulf-gnss-2026}.}
+    \label{fig:iran-consolidated-spoofing}
+\end{figure*}
+
+\FloatBarrier
+
+\subsection{Criminal Activity}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{golden_sun_sky_foreign_plmn.pdf}
+    \caption{Three GSM identities using the Indian 404/06 PLMN appear at the Golden Sun Sky/Jinshui complex in Sihanoukville.}
+    \label{fig:golden-sun-sky-foreign-plmn}
+\end{figure}
+
+\FloatBarrier
+
 \subsection{Contested Territories}
+
+Cellular infrastructure can reveal adversarial activity beyond attacks on the
+network itself, because any event that impacts network operation and
+availability may leave observable infrastructure-level signatures. One example
+of this phenomena is terratorial sovereignty: political control over a region
+includes its communications infrastructure and carries the responsibility for
+its administration. Thus, the geographic distribution of cellular activity can
+implicate political control over those regions, which is a particularly useful
+basis for investigating regions subject to competing claims of sovereignty.
+
+We examine the geographic and temporal distribution of cellular activity in
+contested regions of Eastern Europe and The Levant. In Ukraine, we observe that
+Russian administered cellular infrastructure follows the front lines
+geographically.
 
 \begin{figure}[t]
 \centering
 \setlength{\tabcolsep}{1pt}
 \renewcommand{\arraystretch}{1.0}
+\begin{tabular}{ccc}
+\shortstack{%
+\scriptsize\textbf{(a) Ukraine, 2026}\\[-1pt]
+\includegraphics[width=0.315\linewidth]{ukraine_progression_2026.png}%
+\\[-1pt] \tiny 58k RU \textbar{} 177k UA \textbar{} 63k D2C} &
+\shortstack{%
+\scriptsize\textbf{(b) Crimea, collection}\\[-1pt]
+\includegraphics[width=0.315\linewidth]{crimea_russia_density.png}%
+\\[-1pt] \tiny 142k RU \textbar{} 7 UA} &
+\shortstack{%
+\scriptsize\textbf{(c) Transnistria, collection}\\[-1pt]
+\includegraphics[width=0.315\linewidth]{transnistria_cellular_density.png}%
+\\[-1pt] \tiny 1{,}346 IDC \textbar{} 73{,}660 MD} \\
+\end{tabular}
+
 \begin{tabular}{cc}
-\shortstack{%
-\scriptsize\textbf{(a) Ukraine, 2024}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{ukraine_progression_2024.png}%
-\\[-1pt] \tiny 30{,}628 RU \textbar{} 234{,}113 UA \textbar{} 0 D2C} &
-\shortstack{%
-\scriptsize\textbf{(b) Ukraine, 2025}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{ukraine_progression_2025.png}%
-\\[-1pt] \tiny 79{,}931 RU \textbar{} 252{,}537 UA \textbar{} 6{,}570 D2C} \\
-\shortstack{%
-\scriptsize\textbf{(c) Ukraine, 2026 (Jan--Jun)}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{ukraine_progression_2026.png}%
-\\[-1pt] \tiny 58{,}002 RU \textbar{} 177{,}378 UA \textbar{} 63{,}270 D2C} &
 \shortstack{%
 \scriptsize\textbf{(d) Georgia, collection}\\[-1pt]
 \includegraphics[width=0.48\linewidth]{georgia_russia_density.png}%
-\\[-1pt] \tiny 1{,}175 RU \textbar{} 95{,}606 GE} \\
+\\[-1pt] \tiny 1{,}175 RU \textbar{} 95{,}606 GE} &
+\shortstack{%
+\scriptsize\textbf{(e) Nagorno--Karabakh, collection}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{karabakh_cellular_density.png}%
+\\[-1pt] \tiny 34{,}637 AZ \textbar{} 87{,}307 AM} \\
 \end{tabular}
 
 \smallskip
 \noindent\makebox[\linewidth][c]{%
 \begin{tabular}{r@{\hspace{2pt}}l}
-\tiny Russian terrestrial (MCC 250) &
+\tiny First-listed terrestrial network &
 \includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_ru.png}%
 \\
-\tiny Domestic terrestrial (MCC 255/282) &
+\tiny Second-listed terrestrial network &
 \includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_ua.png}%
 \\
-\tiny Kyivstar Direct-to-Cell (255-707) &
+\tiny Kyivstar Direct-to-Cell (Ukraine only) &
 \includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_sat.png}%
 \\
 & \makebox[0.40\linewidth][l]{\makebox[0pt][c]{\tiny ${10}^{0}$}\hspace*{0.1739\linewidth}\makebox[0pt][c]{\tiny ${10}^{1}$}\hspace*{0.1739\linewidth}\makebox[0pt][c]{\tiny ${10}^{2}$}}
@@ -111,7 +207,7 @@ stations assigned one of these MCCs.
 
 {\tiny Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
 
-    \caption{Density of distinct Russian, domestic, and Kyivstar Direct-to-Cell identities across Ukraine by year and Georgia collection-wide, on one shared scale.}
+    \caption{Distinct cellular identities per 1\,km square show the 2026 Ukraine front alongside collection-wide network distributions in Crimea, Transnistria, Georgia, and Nagorno--Karabakh on a shared log scale.}
     \label{fig:ukraine-progression}
 \end{figure}
 
@@ -120,38 +216,6 @@ stations assigned one of these MCCs.
     \includegraphics[width=\linewidth]{cross_border_case_maps.pdf}
     \caption{Latest positions of collection-wide identities use log-scaled grid cells for dominant networks and bordered markers for foreign MCCs across Northern Syria, the West Bank, and the Gaza Strip.}
     \label{fig:cross-border-case-maps}
-\end{figure*}
-
-\FloatBarrier
-
-\subsection{GNSS Spoofing}
-
-\noindent\begin{minipage}[t]{\columnwidth}
-    \centering
-    \includegraphics[width=\columnwidth]{lima_identity_replay_column.pdf}
-    \captionof{figure}{A cohort of 668 identities observed across Ukraine later concentrates in one Lima neighborhood beginning in mid-2025.}
-    \label{fig:lima-identity-replay}
-\end{minipage}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\textwidth]{vietnam_coordinated_displacement.pdf}
-    \caption{Northern Vietnamese identities converge on one destination; the marker denotes a plausible 2G-transition alternative~\cite{vietnam-2g-cutoff,vietnam-2g-postponed}.}
-    \label{fig:vietnam-coordinated-displacement}
-\end{figure*}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\textwidth]{pakistan_changsha_campaign.pdf}
-    \caption{Islamabad identities recur at one Changsha coordinate alongside the cited aviation and interference reports~\cite{pakistan-aip-s69-24,pakistan-gnss-icao,changsha-gps-interference}.}
-    \label{fig:pakistan-changsha-campaign}
-\end{figure*}
-
-\begin{figure*}[p]
-    \centering
-    \includegraphics[width=\textwidth,height=0.88\textheight,keepaspectratio]{iran_domestic_spoofing.pdf}
-    \caption{Four Iranian source--destination campaigns are shown with their independently reported context~\cite{iran-attack-apr2024,iran-gnss-war-report,iran-blackout-2025,digiato-snapp-gps,dod-midnight-hammer,idf-kermanshah-strike,iran-gps-acknowledgment,iran-gps-drone-threat,marad-gulf-gnss-2026}.}
-    \label{fig:iran-consolidated-spoofing}
 \end{figure*}
 
 \FloatBarrier

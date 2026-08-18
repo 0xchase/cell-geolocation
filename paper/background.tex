@@ -69,6 +69,39 @@ refer to this identifier generally as the \emph{location identifier}. We refer
 to the cell identifier, irrespective of generation and bit-length, as the
 \emph{cell identifier} throughout this work. 
 
+\subsection{Mobile Country Code (MCCs)}
+\label{sec:mccs}
+
+% TODO: What an MCC is
+
+% BEGIN: Testing, private, and unassigned MCCs
+The E.212 identification plan ordinarily associates a \ac{PLMN} with an
+administratively assigned \ac{MCC} and \ac{MNC}. The namespace also includes
+codes intended for testing or private use, as well as values for which no
+assignment exists. We therefore analyze these three classes separately.
+
+MCC 001 is conventionally used by test networks. It permits equipment vendors,
+operators, and researchers to configure a complete \ac{PLMN} identity when
+validating equipment or conducting experiments without using the identifier of a
+commercial national network. MCC 991 serves a narrower, formally administered
+purpose: the \ac{ITU} temporarily assigns two-digit MNCs beneath MCC 991 for
+international, non-commercial trials of proposed telecommunications services.
+Neither MCC identifies the transmitter's country. MCC 999 is reserved for
+internal use within private networks. An operator may select a two- or
+three-digit MNC beneath MCC 999 without requesting an assignment from the
+\ac{ITU}; consequently, the resulting \acp{PLMN} are not globally unique. These
+identifiers should only have significance within the network that selects them
+and are not intended for inter-network routing, roaming, or use outside that
+administrative domain. MCC 999 is therefore suitable private networks.
+
+We classify an MCC as unassigned when the applicable \ac{ITU} registry provides
+no assignment or reserved purpose for that value. Unlike testing and private
+MCCs, unassigned codes have no standardized operational meaning. Their use may
+reflect testing, proprietary or legacy deployments, misconfiguration, or
+unauthorized infrastructure in countries with applicable regulations. Because
+the assigned MCC space can change, this classification must also be evaluated
+against a registry active at the observation date.
+
 \subsection{Apple's \ac{CPS}}
 \label{sec:cps}
 
@@ -105,3 +138,4 @@ It also handles \acp{BTS} for \ac{CDMA}, \ac{CDMA} \ac{EV-DO}, and \ac{SCDMA}.
 We use this knowledge to conduct the first global, large-scale survey of
 cellular \acp{BTS}, as well as examine the security and privacy ramifications of
 an adversary having the ability to accumulate this data.
+

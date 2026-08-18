@@ -458,13 +458,13 @@ def draw_pakistan_activity(
     context_start = trajectory["timestamp"].min().normalize().replace(day=1)
     ax.set_xlim(context_start, pd.Timestamp("2025-10-05"))
     ax.set_ylim(-2, 75)
-    ax.set_ylabel("Distinct identities observed per week")
+    ax.set_ylabel("Cohort identities per week")
     ax.set_xlabel("Observation week")
     ax.grid(color=GRID, linewidth=0.45, zorder=-2)
     locator = mdates.MonthLocator(interval=2)
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-    ax.set_title("Weekly activity at each location", loc="left", pad=3)
+    ax.set_title("Weekly activity of the same identities", loc="left", pad=3)
     ax.legend(
         loc="upper right", ncol=2, frameon=True, facecolor="white",
         edgecolor="none", framealpha=0.82, fontsize=4.8,
