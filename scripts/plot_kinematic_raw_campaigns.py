@@ -308,18 +308,46 @@ def draw_publication_timeline(ax: plt.Axes, group: pd.DataFrame) -> None:
         edgecolor="white", linewidth=0.3, alpha=0.90, zorder=4,
     )
     first_day = min(group.home_timestamp.min(), group.away_timestamp.min()).normalize()
-    last_day = max(group.home_timestamp.max(), group.away_timestamp.max()).normalize()
-    days = pd.date_range(first_day, last_day, freq="D")
-    ticks = days + pd.Timedelta(hours=17)
+    planned_cutoff = pd.Timestamp("2024-09-16 00:00:00")
+    ticks = pd.to_datetime([
+        "2024-09-03 17:00", "2024-09-06 17:00",
+        "2024-09-10 17:00", "2024-09-16 00:00",
+    ])
     ax.set_xticks(ticks)
-    ax.set_xticklabels([f"Sep {day.day}" for day in days])
-    ax.set_xlim(ticks[0] - pd.Timedelta(hours=8), ticks[-1] + pd.Timedelta(hours=8))
+    ax.set_xticklabels(["Sep 3", "Sep 6", "Sep 10", "Sep 16"])
+    ax.set_xlim(first_day - pd.Timedelta(hours=8), planned_cutoff + pd.Timedelta(days=1))
     ax.set_ylim(-5, group.distance_km.max() * 1.10)
     ax.axhline(0, color=DESTINATION, linewidth=0.75, alpha=0.45, zorder=1)
+    ax.axvline(
+        planned_cutoff, color=MUTED, linewidth=0.70,
+        linestyle=(0, (2, 1.5)), alpha=0.90, zorder=2,
+    )
     ax.grid(color=GRID, linewidth=0.42, zorder=-1)
     ax.set_ylabel("Distance from common destination (km)")
     ax.set_xlabel("Observation time (UTC)")
-    ax.set_title("The same identities appear at sources and destination", loc="left", pad=3)
+    ax.set_title("Mostly GSM identities during Vietnam's 2G phase-out", loc="left", pad=3)
+    ax.annotate(
+        "Alternative: 33/35 identities are GSM\namid the nationwide 2G transition",
+        xy=(pd.Timestamp("2024-09-09"), group.distance_km.max() * 0.58),
+        ha="center", va="center", fontsize=4.75, color="#34383b",
+        bbox={
+            "facecolor": "white", "edgecolor": "#aeb3b7",
+            "linewidth": 0.75, "alpha": 0.94, "pad": 0.8,
+        },
+        zorder=7,
+    )
+    ax.annotate(
+        "Planned 2G-only cutoff · Sep. 16\n(later postponed)",
+        xy=(planned_cutoff, group.distance_km.max() * 0.32), xycoords="data",
+        xytext=(-6, 0), textcoords="offset points",
+        ha="right", va="center", fontsize=4.55, color="#34383b",
+        arrowprops={"arrowstyle": "-", "color": MUTED, "linewidth": 0.55},
+        bbox={
+            "facecolor": "white", "edgecolor": "#aeb3b7",
+            "linewidth": 0.75, "alpha": 0.94, "pad": 0.8,
+        },
+        zorder=7,
+    )
     handles = [
         Line2D([0], [0], marker="o", linestyle="", markersize=3.4,
                markerfacecolor=SOURCE, markeredgecolor="white", markeredgewidth=0.3,

@@ -470,6 +470,35 @@ def draw_pakistan_activity(
         edgecolor="none", framealpha=0.82, fontsize=4.8,
         handletextpad=0.35, columnspacing=0.8,
     )
+    event_style = {
+        "facecolor": "white", "edgecolor": "#aeb3b7",
+        "linewidth": 0.75, "alpha": 0.94, "pad": 0.8,
+    }
+    advisory = pd.Timestamp("2024-12-30")
+    airport_interference = pd.Timestamp("2025-01-15")
+    for when, color in [
+        (advisory, MUTED), (airport_interference, DESTINATION),
+    ]:
+        ax.axvline(
+            when, color=color, linewidth=0.70, linestyle=(0, (2, 1.5)),
+            alpha=0.90, zorder=2,
+        )
+    ax.annotate(
+        "Pakistan GNSS advisory begins · Dec. 30",
+        xy=(advisory, 57), xycoords="data",
+        xytext=(0.28, 0.73), textcoords="axes fraction",
+        ha="center", va="center", fontsize=4.55, color="#34383b",
+        arrowprops={"arrowstyle": "-", "color": MUTED, "linewidth": 0.55},
+        bbox=event_style, zorder=7,
+    )
+    ax.annotate(
+        "GPS loss confirmed at Changsha airport · Jan. 15",
+        xy=(airport_interference, 48), xycoords="data",
+        xytext=(0.36, 0.56), textcoords="axes fraction",
+        ha="center", va="center", fontsize=4.55, color="#34383b",
+        arrowprops={"arrowstyle": "-", "color": DESTINATION, "linewidth": 0.55},
+        bbox=event_style, zorder=7,
+    )
 
 
 def render_pakistan(
