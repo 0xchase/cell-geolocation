@@ -82,6 +82,18 @@ ACTIVITY_WINDOWS = {
     "mashhad_kermanshah": ("2025-03-01", "2026-07-15"),
 }
 
+EVENT_MARKERS = {
+    "kazerun_tehran_jun2025": [
+        ("2025-06-20", "Snapp GPS/map-error\nreports peak · Jun. 20"),
+    ],
+    "mashhad_tehran_aug2025": [
+        ("2025-08-20", "Security-related GPS\ndisruption confirmed · Aug. 20"),
+    ],
+    "mashhad_kermanshah": [
+        ("2025-06-23", "Kermanshah missile\nsites struck · Jun. 23"),
+    ],
+}
+
 
 def configure_style() -> None:
     plt.rcParams.update({
@@ -442,13 +454,14 @@ def draw_reported_points(
     group: pd.DataFrame,
     lon_col: str,
     lat_col: str,
+    color: str,
 ) -> int:
     """Plot every identity at its reported coordinate without display offsets."""
     points = group[[lon_col, lat_col]].dropna()
     ax.scatter(
         points[lon_col], points[lat_col], s=10,
-        facecolor="#126b8c", edgecolor="white", linewidth=0.28,
-        alpha=0.52, zorder=6, rasterized=False,
+        facecolor=color, edgecolor="white", linewidth=0.28,
+        alpha=0.68, zorder=6, rasterized=False,
     )
     return int(len(points.drop_duplicates()))
 
@@ -459,6 +472,7 @@ def cluster_inset(
     lon_col: str,
     lat_col: str,
     title: str,
+    color: str,
 ) -> tuple[float, float, float, float]:
     bbox = cluster_bbox(group, lon_col, lat_col)
     ax.set_facecolor("#e8edf0")
@@ -469,24 +483,21 @@ def cluster_inset(
     )
     if not used_tiles:
         ax.grid(color="white", linewidth=0.35)
-    locations = draw_reported_points(ax, group, lon_col, lat_col)
+    draw_reported_points(ax, group, lon_col, lat_col, color)
     ax.set_xlim(bbox[0], bbox[1])
     ax.set_ylim(bbox[2], bbox[3])
     # Every magnification occupies the same physical box; the small local
     # extents make the negligible lon/lat distortion preferable to four pairs
     # of visibly different-sized insets.
     ax.set_aspect("auto")
-    ax.set_title(
-        f"MAGNIFIED {title.upper()}\n"
-        f"{len(group)} IDs / {locations} reported location{'s' if locations != 1 else ''}",
-        loc="left", fontsize=5.45, fontweight="bold", pad=1.5,
-    )
+    ax.set_box_aspect(1)
+    ax.set_title(title, loc="left", fontsize=5.8, fontweight="bold", color=color, pad=1.5)
     ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():
         spine.set_visible(True)
-        spine.set_linewidth(0.45)
-        spine.set_edgecolor("#626669")
+        spine.set_linewidth(0.55)
+        spine.set_edgecolor(color)
     return bbox
 
 
@@ -502,8 +513,16 @@ def domestic_case(
     *,
     replay: bool = False,
 ) -> None:
-    inner = outer.subgridspec(1, 2, width_ratios=[0.88, 1.50], wspace=0.17)
-    ax_map = fig.add_subplot(inner[0, 0])
+    inner = outer.subgridspec(
+        1, 2, width_ratios=[1.08, 1.54], wspace=0.25,
+    )
+    map_grid = inner[0, 0].subgridspec(
+        1, 2, width_ratios=[0.76, 0.32], wspace=0.045,
+    )
+    ax_map = fig.add_subplot(map_grid[0, 0])
+    inset_grid = map_grid[0, 1].subgridspec(2, 1, hspace=0.34)
+    ax_source = fig.add_subplot(inset_grid[0, 0])
+    ax_destination = fig.add_subplot(inset_grid[1, 0])
     ax_activity = fig.add_subplot(inner[0, 1])
     if replay:
         source_lon_col, source_lat_col = "home_lon", "home_lat"
@@ -571,25 +590,43 @@ def domestic_case(
     ax_map.set_xlabel("")
     ax_map.set_ylabel("")
 
+    cluster_inset(
+        ax_source, group, source_lon_col, source_lat_col, "Source", SOURCE,
+    )
+    cluster_inset(
+        ax_destination, group, destination_lon_col, destination_lat_col,
+        "Destination", DESTINATION,
+    )
+
     campaign_id = str(activity["campaign_id"].iloc[0])
     start, end = map(pd.Timestamp, ACTIVITY_WINDOWS[campaign_id])
     weekly = activity.pivot(index="week", columns="endpoint", values="identities")
     monday_start = start - pd.Timedelta(days=start.weekday())
-    all_weeks = pd.date_range(monday_start, end, freq="W-MON")
+    all_weeks = pd.date_range(
+        monday_start, end - pd.Timedelta(days=1), freq="W-MON",
+    )
     weekly = weekly.reindex(all_weeks, fill_value=0).fillna(0)
-    styles = [("source", source_name, SOURCE), ("destination", destination_name, DESTINATION)]
-    for endpoint, label, color in styles:
-        values = weekly[endpoint] if endpoint in weekly else pd.Series(0, index=weekly.index)
-        ax_activity.plot(
-            weekly.index, values, color=color, linewidth=1.25,
-            marker="o", markersize=2.1, markeredgecolor="white",
-            markeredgewidth=0.25, label=label, zorder=3,
-        )
-    ax_activity.set_xlim(start, end)
-    ax_activity.set_ylim(-0.8, len(group) + max(2.5, len(group) * 0.10))
-    ax_activity.set_ylabel("Distinct identities observed per week")
+    source_values = weekly.get("source", pd.Series(0, index=weekly.index))
+    destination_values = weekly.get("destination", pd.Series(0, index=weekly.index))
+    ax_activity.bar(
+        weekly.index, source_values, width=5.6, color=SOURCE,
+        edgecolor="white", linewidth=0.35, label=source_name, zorder=3,
+    )
+    ax_activity.bar(
+        weekly.index, -destination_values, width=5.6, color=DESTINATION,
+        edgecolor="white", linewidth=0.35, label=destination_name, zorder=3,
+    )
+    ax_activity.axhline(0, color=INK, linewidth=0.75, zorder=4)
+    tick_step = max(5, int(np.ceil(len(group) / 10) * 5))
+    limit = tick_step * 2
+    ticks = np.arange(-limit, limit + tick_step, tick_step)
+    ax_activity.set_ylim(-limit * 1.06, limit * 1.06)
+    ax_activity.set_yticks(ticks, [str(abs(int(value))) for value in ticks])
+    ax_activity.set_xlim(all_weeks.min() - pd.Timedelta(days=5),
+                         all_weeks.max() + pd.Timedelta(days=5))
+    ax_activity.set_ylabel("Distinct identities per week", labelpad=0.5)
     ax_activity.set_xlabel("Observation week")
-    ax_activity.grid(color=GRID, linewidth=0.45, zorder=-2)
+    ax_activity.grid(axis="y", color=GRID, linewidth=0.45, zorder=-2)
     locator = mdates.AutoDateLocator(minticks=4, maxticks=7)
     ax_activity.xaxis.set_major_locator(locator)
     ax_activity.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
@@ -599,6 +636,26 @@ def domestic_case(
         edgecolor="none", framealpha=0.82, fontsize=4.8,
         handletextpad=0.35, columnspacing=0.8,
     )
+    for event_date, label in EVENT_MARKERS.get(campaign_id, []):
+        when = pd.Timestamp(event_date)
+        ax_activity.axvline(
+            when, color=MUTED, linewidth=0.65, linestyle=(0, (2, 1.5)),
+            alpha=0.88, zorder=2,
+        )
+        ax_activity.scatter(
+            [when], [0], marker="D", s=13, facecolor=INK,
+            edgecolor="white", linewidth=0.35, zorder=6,
+        )
+        ax_activity.text(
+            when, 0.91, label,
+            transform=ax_activity.get_xaxis_transform(),
+            ha="center", va="top", fontsize=4.45, color=INK,
+            bbox={
+                "facecolor": "white", "edgecolor": "#aeb3b7",
+                "linewidth": 0.45, "alpha": 0.92, "pad": 0.7,
+            },
+            zorder=7,
+        )
 
 
 def render_event_timeline(ax: plt.Axes, context: pd.DataFrame) -> None:
@@ -819,11 +876,12 @@ def render_domestic(
     domestic_case(
         fig, grid[3, 0], replay,
         activity[activity["campaign_id"].eq("mashhad_kermanshah")],
-        rings, "Jun.–Aug. 2025; recurs Jun. 2026",
+        rings, "Jun.–Aug. 2025 and Jun. 2026",
         "Mashhad", "Kermanshah", replay=True,
     )
     fig.text(
-        0.045, 0.010, "Boundaries: Natural Earth",
+        0.045, 0.010,
+        "Boundaries: Natural Earth · detail maps: OpenTopoMap / OpenStreetMap / SRTM",
         ha="left", va="bottom",
         fontsize=4.4, color=MUTED,
     )
