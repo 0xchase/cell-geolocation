@@ -35,7 +35,7 @@ def main():
     specs = [("CT12", "suspected", 15), ("BM03", "confirmed", 15), ("BA23", "suspected", 15)]
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 7, "pdf.fonttype": 42})
     fig, axes = plt.subplots(2, 2, figsize=(3.35, 3.35))
-    fig.subplots_adjust(left=.035, right=.985, top=.965, bottom=.035, hspace=.27, wspace=.10)
+    fig.subplots_adjust(left=.025, right=.995, top=.88, bottom=.025, hspace=.16, wspace=.035)
     axes = axes.ravel()
     for ax, (site, status, zoom) in zip(axes[:3], specs):
         group = ids[ids.cluster.eq(site)]
@@ -58,6 +58,7 @@ def main():
         ax.set_title(f"{site} · {status}\n404/01 · TAC-0 · {len(group)} IDs · {obs:,} obs.", fontsize=6.0, fontweight="bold", pad=2)
         ax.text(.012, .014, "cross: compound centre", transform=ax.transAxes, fontsize=4.2, color="white", bbox={"facecolor":"black", "alpha":.62, "pad":1.0})
         scale_bar(ax, bbox)
+        ax.set_box_aspect(1)
     # National overview: every registry location, with confirmed and suspected
     # entries separated by marker shape.
     ax = axes[3]
@@ -68,10 +69,11 @@ def main():
     ax.scatter(suspected.longitude, suspected.latitude, s=8, marker="+", color="#f2b134", linewidth=.55, alpha=.9, zorder=5)
     ax.set_title("Cambodia-wide compound registry", fontsize=5.6, fontweight="bold", pad=2)
     ax.text(.02, .03, "× confirmed   + suspected", transform=ax.transAxes, fontsize=4.0, color="white", bbox={"facecolor":"black", "alpha":.62, "pad":1.0})
+    ax.set_box_aspect(1)
     pdf = FIGS / "criminal_compound_additional.pdf"
     png = FIGS / "criminal_compound_additional.png"
-    fig.savefig(pdf, bbox_inches="tight")
-    fig.savefig(png, dpi=180, bbox_inches="tight")
+    fig.savefig(pdf)
+    fig.savefig(png, dpi=180)
     Image.open(png).convert("RGB").save(png)
 
 

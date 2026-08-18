@@ -58,8 +58,8 @@ def main():
     specs = [("KA03", "Bokor Mountain", 14), ("KA01", "Bokor Mountain", 15),
              ("BA01", "Bavet", 15), ("TD01H", "Koh Kong", 16)]
     # A compact 2×2 one-column item, matching the paper's facility quad style.
-    fig = plt.figure(figsize=(3.35, 3.55))
-    gs = fig.add_gridspec(2, 2, hspace=.28, wspace=.10, left=.035, right=.985, top=.965, bottom=.035)
+    fig = plt.figure(figsize=(3.35, 3.35))
+    gs = fig.add_gridspec(2, 2, hspace=.28, wspace=.10, left=.035, right=.985, top=.88, bottom=.035)
 
     for index, (site, place, zoom) in enumerate(specs):
         ax = fig.add_subplot(gs[index // 2, index % 2])
@@ -77,9 +77,9 @@ def main():
         ax.text(.012, .014, "cross: compound centre", transform=ax.transAxes, fontsize=4.1, color="white", bbox={"facecolor":"black", "alpha":.62, "pad":1.0})
         scale_bar(ax, bbox)
     fig.text(.985, .012, "Imagery © Esri and contributors", ha="right", va="bottom", fontsize=4.2, color="#666")
-    fig.savefig(FIGS / "criminal_compound_quad.pdf", bbox_inches="tight")
+    fig.savefig(FIGS / "criminal_compound_quad.pdf")
     png_path = FIGS / "criminal_compound_quad.png"
-    fig.savefig(png_path, dpi=180, bbox_inches="tight")
+    fig.savefig(png_path, dpi=180)
     # pdflatex can mishandle RGBA raster images; flatten to an RGB PNG for paper inclusion.
     Image.open(png_path).convert("RGB").save(png_path)
 

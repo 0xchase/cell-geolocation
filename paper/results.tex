@@ -185,26 +185,46 @@ evidence to be evaluated alongside these alternatives.
 
 \subsection{Criminal Activity}
 
+Scam compounds are organized criminal facilities in which workers conduct online
+fraud at scale. Recruitment often involves deceptive employment offers followed
+by coercion, trafficking, or debt bondage. Inside the compounds, captives
+execute a variety of investment and impersonation scams. Reports describe
+restricted movement, confiscated identity documents, surveillance, threats, and
+violence used to enforce compliance and prevent escape. In recent years these
+organizations have expanded across Southeast Asia, principally in Cambodia,
+Myanmar, and Laos~\cite{unodc-casinos-cyber-fraud-2023}. These enterprises are
+interesting targets for Internet-measurement because documented compounds have
+increasingly deployed bespoke connectivity. While they may prefer linking to
+fiber networks serving casinos, hotels, resorts, etc. local authorities have
+responded by cutting their internet, so some scam operations have turned to
+alternative strategies like smuggled Starlink terminals, clandestine cables, and
+mobile base stations~\cite{unodc-casinos-cyber-fraud-2023}.
+
 \begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{golden_sun_sky_foreign_plmn.pdf}
-    \caption{Three GSM identities using the Indian 404/06 PLMN appear at the Golden Sun Sky/Jinshui complex in Sihanoukville.}
-    \label{fig:golden-sun-sky-foreign-plmn}
-\end{figure}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\textwidth]{criminal_anomaly_case_studies.pdf}
-    \caption{Geographic and identifier-topology views of the Eastern Shan foreign-PLMN system, the Estepona Kuwait-coded family, and the Krugersdorp Zambia-coded family.}
-    \label{fig:criminal-anomaly-case-studies}
-\end{figure*}
-
-\begin{figure}[p]
     \centering
     \includegraphics[width=\linewidth]{criminal_compound_quad.png}
     \caption{Full-color imagery shows the four primary Cambodia 404/01 LTE TAC-0 site-confined clusters and their observed identifier locations.}
     \label{fig:criminal-compound-quad}
 \end{figure}
+
+We began our search for anomolous infrastructure in Cambodia, for which our
+corpus contains 139.1 million observations of 315,264 unique cell-identity
+records. About 1.8 million observations (1.29\%) utilized out-of-country MCCs
+comprising 5,195 unique records, which was a managable quantity to triage
+manually. One anomaly that immediately stood out was that around 5\% of them
+broadcast an Indian MCC and (more oddly) a Tracking-Area-Code (TAC) value of 0.
+All the identities were spatially clustered at several locations around the
+country, which we reverse geocoded and cross referenced with human rights
+reports that documented suspected compounds. Of the 7 clusters we identified, 5
+had been classified by Amnesty International as "confirmed" scam compounds
+(named KA01, KA03, TD01H, BM03, and BA01) and the remaining 2 were specifically
+identified as "suspicious locations" (named CT12 and BA23) on account of
+physical and organizational security features resembling known
+compounds~\cite{amnesty-cambodia-scams-2025,amnesty-cambodia-scams-2026}. Our
+collection observed the unusual 404/01–TAC-0 configuration nowhere else in
+Cambodia outside the five confirmed scam compounds and two suspected ones, which
+we belive supports the view the latter should be subject to further
+investigation.
 
 \begin{figure}[p]
     \centering
@@ -212,6 +232,26 @@ evidence to be evaluated alongside these alternatives.
     \caption{Full-color imagery shows the three additional Cambodia 404/01 LTE TAC-0 clusters omitted from the primary-compound quad.}
     \label{fig:criminal-compound-additional}
 \end{figure}
+
+Figure~\ref{fig:criminal-compound-quad} shows four compounds denoted KA03, KA01,
+BA01, and TD01H by Amnesty International with the corresponding cellular
+observations. KA03 and KA01 are secured facilities on Bokor Mountain where
+survivors reported deceptive recruitment, forced work, and physical abuse. At
+BA01 in Bavet, survivors described confinement behind fences and abuse by
+guards. TD01H, in the Thma Da special economic zone, was associated with
+reported rescues and later evidence of fencing and guarded checkpoints.
+Figure~\ref{fig:criminal-compound-additional} shows BM03, CT12, and BA23, which
+exhibit the same unusual cellular signature. BM03, an alleged casino and
+call-center complex, was associated with rescues and security features including
+fences, cameras, and internal
+checkpoints~\cite{amnesty-cambodia-scams-2025,amnesty-cambodia-scams-2026}.
+
+%\begin{figure*}[t]
+%    \centering
+%    \includegraphics[width=\textwidth]{criminal_anomaly_case_studies.pdf}
+%    \caption{Geographic and identifier-topology views of the Eastern Shan foreign-PLMN system, the Estepona Kuwait-coded family, and the Krugersdorp Zambia-coded family.}
+%    \label{fig:criminal-anomaly-case-studies}
+%\end{figure*}
 
 \FloatBarrier
 
@@ -238,7 +278,7 @@ geographically.
 \begin{tabular}{c}
 \shortstack{%
 \scriptsize\textbf{(a) Ukraine, 2026}\\[-1pt]
-\includegraphics[width=\linewidth]{ukraine_progression_2026_cropped.png}%
+\includegraphics[width=\linewidth]{ukraine_progression_2026_cropped2.png}%
 \\[-1pt] \tiny
 {\color[HTML]{C02A3C}\rule[0.15em]{0.8em}{0.8em}}~58k RU\quad
 {\color[HTML]{2F6F9F}\rule[0.15em]{0.8em}{0.8em}}~177k UA\quad
@@ -249,13 +289,13 @@ geographically.
 \begin{tabular}{cc}
 \shortstack{%
 \scriptsize\textbf{(b) South Ossetia, collection-wide}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{south_ossetia_cellular_density.png}%
+\includegraphics[width=0.48\linewidth]{south_ossetia_cellular_density_cropped2.png}%
 \\[-1pt] \tiny
 {\color[HTML]{C02A3C}\rule[0.15em]{0.8em}{0.8em}}~RU\quad
 {\color[HTML]{2F6F9F}\rule[0.15em]{0.8em}{0.8em}}~GE} &
 \shortstack{%
 \scriptsize\textbf{(c) Nagorno--Karabakh}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{karabakh_cellular_density.png}%
+\includegraphics[width=0.48\linewidth]{karabakh_cellular_density_cropped2.png}%
 \\[-1pt] \tiny
 {\color[HTML]{C02A3C}\rule[0.15em]{0.8em}{0.8em}}~AZ\quad
 {\color[HTML]{2F6F9F}\rule[0.15em]{0.8em}{0.8em}}~AM} \\

@@ -168,9 +168,13 @@ def render(specs, output: Path, preview: Path, title: str, rows: int, cols: int 
             osm_id,
             zoom=zoom,
             footer_text=compact_grouped_footer(selected),
-            title_fontsize=6.1 if rows == 1 and cols == 1 else (4.7 if column_quad else 7.15),
+            title_fontsize=6.1 if rows == 1 and cols == 1 else (4.1 if column_quad else 7.15),
             footer_fontsize=4.4 if rows == 1 and cols == 1 else (3.65 if column_quad else 5.25),
         )
+        if column_quad:
+            # Keep every main-paper quad cell geometrically square, independent
+            # of the latitude-dependent geographic aspect ratio.
+            ax.set_box_aspect(1)
     for ax in axes.flat[len(specs):]:
         ax.set_visible(False)
     handles = legend_handles(categories)
@@ -180,8 +184,11 @@ def render(specs, output: Path, preview: Path, title: str, rows: int, cols: int 
     # Appendix grids use a double-width source canvas and are reduced by about
     # half in the paper; column quads are exported at their final physical size.
     pdf_dpi = 300 if column_figure else 180
-    fig.savefig(output, dpi=pdf_dpi, bbox_inches="tight")
-    fig.savefig(preview, dpi=180 if column_figure else 160, bbox_inches="tight")
+    # Keep the three main one-column quads on an identical canvas; tight
+    # cropping made their exported widths differ despite equal map cells.
+    crop = None if column_figure else "tight"
+    fig.savefig(output, dpi=pdf_dpi, bbox_inches=crop)
+    fig.savefig(preview, dpi=180 if column_figure else 160, bbox_inches=crop)
     plt.close(fig)
 
 
