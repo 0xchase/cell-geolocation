@@ -49,25 +49,29 @@ of potentially private infrastructure and activities.
     \label{fig:commercial-sensitive-mcc-maps}
 \end{figure}
 
-Figure~\ref{fig:commercial-sensitive-mcc-maps} shows that the same exposure extends to commercial and
-critical infrastructure. Private MCC identities delineate networks at the Cadia mine (11 LTE identities;
-5,334 observations), Tesla Gigafactory Berlin (20 NR identities; 8,865 observations), the Applus+ IDIADA
-automotive proving ground (11 GSM/UMTS identities; 4,622 observations), and Point Beach Nuclear Plant (four
-NR identities; 760 observations). These records reveal not only the presence of internal cellular systems,
-but also their technology generation, physical footprint, and persistence—information that may disclose
-facility capabilities, testing activity, or operational changes. Thus, even when an MCC is correctly used
-for a private network, making its observations globally discoverable creates a privacy and security risk
-for the organization operating it.
+Figure~\ref{fig:commercial-sensitive-mcc-maps} shows that the same exposure
+extends to commercial and critical infrastructure. Private MCC identities
+delineate networks at the Cadia mine (11 LTE identities; 5,334 observations),
+Tesla Gigafactory Berlin (20 NR identities; 8,865 observations), the Applus+
+IDIADA automotive proving ground (11 GSM/UMTS identities; 4,622 observations),
+and Point Beach Nuclear Plant (four NR identities; 760 observations). These
+records reveal not only the presence of internal cellular systems, but also
+their technology generation, physical footprint, and persistence—information
+that may disclose facility capabilities, testing activity, or operational
+changes. Thus, even when an MCC is correctly used for a private network, making
+its observations globally discoverable has privacy implications for the
+organization operating it.
 
-Figure~\ref{fig:military-defense-mcc-maps} demonstrates that atypical MCCs can act as signatures of
-otherwise non-public infrastructure. We observe an unassigned 009/09 NR identity at the DGA Landes missile
-test range (578 observations), testing and unassigned identities at Idaho National Laboratory (five
-identities; 1,033 observations), six testing 001/01 LTE identities at Porton Down (688 observations), and
-five testing 001/01 LTE and NR identities at Stockbridge (1,215 observations). Their repeated observation
-and spatial concentration within research and defense facilities reveal the location, radio technology, and
-approximate extent of networks that may have been intended only for local or experimental use. Although
-these associations do not establish network ownership or purpose, they show that globally collected
-cellular metadata can expose sensitive infrastructure without requiring access to subscriber traffic.
+Figure~\ref{fig:military-defense-mcc-maps} demonstrates that atypical MCCs can
+act as signatures of otherwise non-public infrastructure. We observe an
+unassigned 009/09 NR identity at the DGA Landes missile test range (578
+observations), testing and unassigned identities at Idaho National Laboratory
+(five identities; 1,033 observations), six testing 001/01 LTE identities at
+Porton Down (688 observations), and five testing 001/01 LTE and NR identities at
+Stockbridge (1,215 observations). Their repeated observation and spatial
+concentration within research and defense facilities reveal the location, radio
+technology, and approximate extent of networks that may have been intended only
+for local or experimental use.
 
 \begin{figure}[t]
     \centering
@@ -79,7 +83,6 @@ cellular metadata can expose sensitive infrastructure without requiring access t
 
 \subsection{Out-of-Country \acp{MCC}}
 
-
 Valid nationally assigned MCC can be still be a signature of adversarial
 activity when it appears outside the country that administers it. Although some
 mismatches arise from legacy allocations or identifier aliasing, spatially
@@ -87,14 +90,27 @@ concentrated mismatches can be a side effect of private or sensitive sites and
 activities. We analyzed a variety of examples where out-of-country MCC placement
 could be used to discover unusual operator activity.
 
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\linewidth]{out_of_country_mcc_matrix.pdf}
-    \caption{Out-of-country cellular identities more than 25\,km beyond their
-    assigned \ac{MCC} territory concentrate in a small number of located-country
-    and MCC-country pairs.}
-    \label{fig:out-of-country-mcc-matrix}
-\end{figure*}
+%\begin{figure*}[t]
+%    \centering
+%    \includegraphics[width=\linewidth]{out_of_country_mcc_matrix.pdf}
+%    \caption{Out-of-country cellular identities more than 25\,km beyond their
+%    assigned \ac{MCC} territory concentrate in a small number of located-country
+%    and MCC-country pairs.}
+%    \label{fig:out-of-country-mcc-matrix}
+%\end{figure*}
+
+After excluding identities located within their assigned MCC territory or within
+25\,km of its boundary, we retain 253,484 distinct cell identities across 1,261
+located-country–MCC-country pairs. Figure~\ref{fig:out-of-country-mcc-matrix}
+shows that this distribution is highly concentrated: Russian MCCs in Ukraine
+account for 77,805 identities, followed by U.S. MCCs in Puerto Rico (44,773),
+Jamaican MCCs in Haiti (20,587), and Monaco MCCs in Kosovo (17,314). These
+mismatches have heterogeneous explanations, including conflict-related network
+deployment, territorial and legacy allocations, identifier aliasing, database
+errors, and deliberate network emulation. The matrix therefore serves as a
+screening mechanism rather than evidence of adversarial activity: large
+concentrations reveal systematic phenomena, while the long tail identifies
+smaller cases requiring spatial and temporal investigation.
 
 \begin{figure}[t]
     \centering
@@ -103,14 +119,51 @@ could be used to discover unusual operator activity.
     \label{fig:geopolitical-defense-mcc-maps}
 \end{figure}
 
+Figure~\ref{fig:geopolitical-defense-mcc-maps} illustrates why even
+low-frequency mismatches can be security-relevant when situated in sensitive
+facilities. We observe one Azerbaijani GSM identity at an IRGC command facility
+in Tehran (81 observations), one Ukrainian GSM identity at a military unit near
+Chkalovsky in Moscow Oblast (88 observations), ten LTE identities carrying
+Czech, Armenian, Bahraini, and Singaporean MCCs at the Muscatatuck Urban
+Training Center (1,309 observations), and 27 GSM and LTE identities carrying
+Tuvalu’s MCC at Fort Bragg (3,888 observations). The multi-country concentration
+at a training facility is consistent with network emulation, while the coherent
+Tuvalu-coded deployment at Fort Bragg suggests a locally configured system
+rather than ordinary roaming. The two isolated identities may instead reflect
+transient testing, misconfiguration, geolocation error, or deliberate
+manipulation; nevertheless, their detectability demonstrates how foreign MCCs
+can expose signals activity at locations of military or geopolitical interest.
+
 \FloatBarrier
 
 \subsection{GNSS Spoofing}
 
+GNSS spoofing is the deliberate transmission of counterfeit satellite-navigation
+signals that cause a receiver to calculate an incorrect position, velocity, or
+time. A spoofer generally generates signals that resemble authentic GNSS
+broadcasts but are stronger, delayed, or otherwise modified so that the receiver
+locks onto the counterfeit constellation. By gradually changing the counterfeit
+signals, an attacker can move the reported position smoothly; by switching
+between signal configurations, the attacker can create abrupt jumps or recurring
+false locations. Spoofing differs from jamming: jamming prevents a receiver from
+obtaining a usable GNSS fix, whereas spoofing supplies a plausible but incorrect
+one.
+
+We show this activity can be indirectly discovered through Apple’s cellular
+positioning system. Devices collecting cellular identifiers associate nearby
+cells with their own estimated locations and upload those observations to
+Apple’s database. If the collector’s GNSS position is spoofed, genuine cellular
+identifiers can be recorded at a false location, causing the database position
+of a fixed cell or group of cells to migrate. This mechanism does not provide
+absolute proof of an RF spoofing transmission, since similar patterns can arise
+from geolocation errors, or transported equipment. We therefore treat
+coordinated, geographically implausible, and temporally reversible movements as
+evidence to be evaluated alongside these alternatives.
+
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]{attributable_spoofing_movements.pdf}
-    \caption{Stored cell positions move toward Queen Alia, Sheremetyevo, two alternating targets near Vladimir, and a recurring Changsha endpoint for Islamabad identities~\cite{opsgroup-spoofing-report,spire-moscow-gnss-2025,pakistan-aip-s69-24,pakistan-gnss-icao,changsha-gps-interference}.}
+    \caption{Stored cell positions move toward Queen Alia, Sheremetyevo, two alternating targets near Vladimir, a recurring Changsha endpoint for Islamabad identities, and paired airport attractors in Lyon and Voronezh~\cite{opsgroup-spoofing-report,spire-moscow-gnss-2025,pakistan-aip-s69-24,pakistan-gnss-icao,changsha-gps-interference}.}
     \label{fig:attributable-spoofing-movements}
 \end{figure*}
 
@@ -139,6 +192,27 @@ could be used to discover unusual operator activity.
     \label{fig:golden-sun-sky-foreign-plmn}
 \end{figure}
 
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{criminal_anomaly_case_studies.pdf}
+    \caption{Geographic and identifier-topology views of the Eastern Shan foreign-PLMN system, the Estepona Kuwait-coded family, and the Krugersdorp Zambia-coded family.}
+    \label{fig:criminal-anomaly-case-studies}
+\end{figure*}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\linewidth]{criminal_compound_quad.png}
+    \caption{Full-color imagery shows the four primary Cambodia 404/01 LTE TAC-0 site-confined clusters and their observed identifier locations.}
+    \label{fig:criminal-compound-quad}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\linewidth]{criminal_compound_additional.png}
+    \caption{Full-color imagery shows the three additional Cambodia 404/01 LTE TAC-0 clusters omitted from the primary-compound quad.}
+    \label{fig:criminal-compound-additional}
+\end{figure}
+
 \FloatBarrier
 
 \subsection{Contested Territories}
@@ -159,55 +233,40 @@ geographically.
 
 \begin{figure}[t]
 \centering
-\setlength{\tabcolsep}{1pt}
+\setlength{\tabcolsep}{2pt}
 \renewcommand{\arraystretch}{1.0}
-\begin{tabular}{ccc}
+\begin{tabular}{c}
 \shortstack{%
 \scriptsize\textbf{(a) Ukraine, 2026}\\[-1pt]
-\includegraphics[width=0.315\linewidth]{ukraine_progression_2026.png}%
-\\[-1pt] \tiny 58k RU \textbar{} 177k UA \textbar{} 63k D2C} &
-\shortstack{%
-\scriptsize\textbf{(b) Crimea, collection}\\[-1pt]
-\includegraphics[width=0.315\linewidth]{crimea_russia_density.png}%
-\\[-1pt] \tiny 142k RU \textbar{} 7 UA} &
-\shortstack{%
-\scriptsize\textbf{(c) Transnistria, collection}\\[-1pt]
-\includegraphics[width=0.315\linewidth]{transnistria_cellular_density.png}%
-\\[-1pt] \tiny 1{,}346 IDC \textbar{} 73{,}660 MD} \\
-\end{tabular}
-
-\begin{tabular}{cc}
-\shortstack{%
-\scriptsize\textbf{(d) Georgia, collection}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{georgia_russia_density.png}%
-\\[-1pt] \tiny 1{,}175 RU \textbar{} 95{,}606 GE} &
-\shortstack{%
-\scriptsize\textbf{(e) Nagorno--Karabakh, collection}\\[-1pt]
-\includegraphics[width=0.48\linewidth]{karabakh_cellular_density.png}%
-\\[-1pt] \tiny 34{,}637 AZ \textbar{} 87{,}307 AM} \\
+\includegraphics[width=\linewidth]{ukraine_progression_2026_cropped.png}%
+\\[-1pt] \tiny
+{\color[HTML]{C02A3C}\rule[0.15em]{0.8em}{0.8em}}~58k RU\quad
+{\color[HTML]{2F6F9F}\rule[0.15em]{0.8em}{0.8em}}~177k UA\quad
+{\color[HTML]{8E5AA9}\rule[0.15em]{0.8em}{0.8em}}~63k D2C} \\
 \end{tabular}
 
 \smallskip
-\noindent\makebox[\linewidth][c]{%
-\begin{tabular}{r@{\hspace{2pt}}l}
-\tiny First-listed terrestrial network &
-\includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_ru.png}%
-\\
-\tiny Second-listed terrestrial network &
-\includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_ua.png}%
-\\
-\tiny Kyivstar Direct-to-Cell (Ukraine only) &
-\includegraphics[width=0.40\linewidth,height=4pt]{ukraine_progression_cbar_sat.png}%
-\\
-& \makebox[0.40\linewidth][l]{\makebox[0pt][c]{\tiny ${10}^{0}$}\hspace*{0.1739\linewidth}\makebox[0pt][c]{\tiny ${10}^{1}$}\hspace*{0.1739\linewidth}\makebox[0pt][c]{\tiny ${10}^{2}$}}
-\end{tabular}%
-}
-\par\vspace{2pt}
-{\tiny Distinct cells per 1\,km square bin (shared log scale); dominant network sets hue.\quad\rule[0.15em]{1.4em}{1pt}~Documented front (Ukraine)}
+\begin{tabular}{cc}
+\shortstack{%
+\scriptsize\textbf{(b) South Ossetia, collection-wide}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{south_ossetia_cellular_density.png}%
+\\[-1pt] \tiny
+{\color[HTML]{C02A3C}\rule[0.15em]{0.8em}{0.8em}}~RU\quad
+{\color[HTML]{2F6F9F}\rule[0.15em]{0.8em}{0.8em}}~GE} &
+\shortstack{%
+\scriptsize\textbf{(c) Nagorno--Karabakh}\\[-1pt]
+\includegraphics[width=0.48\linewidth]{karabakh_cellular_density.png}%
+\\[-1pt] \tiny
+{\color[HTML]{C02A3C}\rule[0.15em]{0.8em}{0.8em}}~AZ\quad
+{\color[HTML]{2F6F9F}\rule[0.15em]{0.8em}{0.8em}}~AM} \\
+\end{tabular}
+
+\smallskip
+{\tiny Maps use log-scaled distinct cells per 1\,km square bin; Russian cells in panel (b) are more than 25\,km from Russia.\quad\rule[0.15em]{1.4em}{1pt}~Documented front (Ukraine)}
 
 {\tiny Basemap \copyright{} OpenStreetMap contributors, \copyright{} CARTO}
 
-    \caption{Distinct cellular identities per 1\,km square show the 2026 Ukraine front alongside collection-wide network distributions in Crimea, Transnistria, Georgia, and Nagorno--Karabakh on a shared log scale.}
+    \caption{Cellular identities trace the 2026 Ukraine front, concentrate around Tskhinvali in South Ossetia, and show Azerbaijani and Armenian network footprints across Nagorno--Karabakh.}
     \label{fig:ukraine-progression}
 \end{figure}
 

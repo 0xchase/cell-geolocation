@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot four attribution-screen positives as geographic movements.
+"""Plot five attribution-screen positives as geographic movements.
 
 The figure is intentionally geography-first: each panel draws the returned
 cell-position trajectories over a quiet labelled basemap.  Figure generation
@@ -40,13 +40,14 @@ SHEREMETYEVO = (37.415, 55.972)
 QUEEN_TIMELINE = ATTRIBUTION / "queen_alia_weekly_distance.csv"
 MOSCOW_TIMELINE = ATTRIBUTION / "moscow_weekly_distance.csv"
 CONTROLLED_TRAJECTORIES = DATA / "high_quality" / "controlled_campaign_trajectories.csv"
+LYON_VORONEZH_TRAJECTORY = ATTRIBUTION / "lyon_voronezh_trajectory.csv"
 
 
 def configure() -> None:
     plt.rcParams.update({
         "font.family": "DejaVu Sans",
         "font.size": 6.2,
-        "axes.titlesize": 7.2,
+        "axes.titlesize": 6.3,
         "axes.labelsize": 5.8,
         "xtick.labelsize": 5.2,
         "ytick.labelsize": 5.2,
@@ -462,7 +463,7 @@ def draw_vladimir(ax: plt.Axes, time_ax: plt.Axes) -> None:
     lons = np.r_[homes.lon, west.lon, east.lon, west_target[0], east_target[0]]
     lats = np.r_[homes.lat, west.lat, east.lat, west_target[1], east_target[1]]
     bbox = square_bbox(lons, lats, padding=1.12, minimum_km=70)
-    setup_panel(ax, bbox, "Vladimir · alternating targets")
+    setup_panel(ax, bbox, "Vladimir · two targets")
 
     for phase, color in ((west, PURPLE), (east, RED)):
         daily = phase.assign(day=phase.timestamp.dt.floor("D"))
@@ -481,7 +482,7 @@ def draw_vladimir(ax: plt.Axes, time_ax: plt.Axes) -> None:
     label_point(ax, west_target, "February target", PURPLE, offset=(4, 3))
     label_point(ax, east_target, "March target", RED, offset=(-4, 3), align="right")
     ax.text(
-        0.98, 0.025, "27 identities · 5 PLMNs · west → home → east",
+        0.98, 0.025, "27 identities · 5 PLMNs",
         transform=ax.transAxes, ha="right", va="bottom", fontsize=4.7, color=INK,
         bbox={"facecolor": "white", "edgecolor": "#858b8e", "linewidth": 0.7,
               "alpha": 0.93, "pad": 0.9}, zorder=14,
@@ -602,6 +603,161 @@ def draw_islamabad(ax: plt.Axes, time_ax: plt.Axes) -> None:
     )
 
 
+def collect_lyon_voronezh() -> pd.DataFrame:
+    """Fetch the fixed cohort observed at both airport attractors."""
+    from ch_remote import ch_df
+
+    cohort = ch_df(
+        """
+        WITH
+          lyon AS (
+            SELECT DISTINCT mcc, mnc, lac, cid, toString(cell_type) AS cell_type
+            FROM cell.cellpos
+            WHERE mcc = 250 AND mnc IN (54, 96, 98) AND cell_type = 'gsm'
+              AND plat BETWEEN 4569 AND 4576 AND plon BETWEEN 504 AND 512
+          ),
+          voronezh AS (
+            SELECT DISTINCT mcc, mnc, lac, cid, toString(cell_type) AS cell_type
+            FROM cell.cellpos
+            WHERE mcc = 250 AND mnc IN (54, 96, 98) AND cell_type = 'gsm'
+              AND plat BETWEEN 5179 AND 5183 AND plon BETWEEN 3920 AND 3925
+          )
+        SELECT mcc, mnc, lac, cid, cell_type
+        FROM lyon INNER JOIN voronezh USING (mcc, mnc, lac, cid, cell_type)
+        ORDER BY mcc, mnc, lac, cid, cell_type
+        """
+    )
+    if len(cohort) != 135:
+        raise RuntimeError(f"Lyon--Voronezh cohort changed: expected 135 identities, got {len(cohort)}")
+    keys = ",".join(
+        f"({int(row.mcc)},{int(row.mnc)},{int(row.lac)},{int(row.cid)},'{row.cell_type}')"
+        for row in cohort.itertuples(index=False)
+    )
+    return ch_df(
+        f"""
+        SELECT
+          timestamp, mcc, mnc, lac, cid, toString(cell_type) AS cell_type,
+          lat, lon,
+          multiIf(
+            lat BETWEEN 45.69 AND 45.76 AND lon BETWEEN 5.04 AND 5.12, 'Lyon',
+            lat BETWEEN 51.79 AND 51.83 AND lon BETWEEN 39.20 AND 39.25, 'Voronezh',
+            'Other'
+          ) AS endpoint
+        FROM cell.geos
+        PREWHERE (mcc,mnc,lac,cid,toString(cell_type)) IN ({keys})
+        WHERE
+          (lat BETWEEN 45.69 AND 45.76 AND lon BETWEEN 5.04 AND 5.12)
+          OR (lat BETWEEN 51.79 AND 51.83 AND lon BETWEEN 39.20 AND 39.25)
+        ORDER BY timestamp, mcc, mnc, lac, cid, cell_type
+        """,
+        settings={"max_threads": 6, "optimize_aggregation_in_order": 0},
+    )
+
+
+def load_lyon_voronezh(refresh: bool) -> pd.DataFrame:
+    if refresh:
+        frame = collect_lyon_voronezh()
+        frame.to_csv(LYON_VORONEZH_TRAJECTORY, index=False)
+    if not LYON_VORONEZH_TRAJECTORY.exists():
+        raise FileNotFoundError(
+            f"Missing {LYON_VORONEZH_TRAJECTORY}; run with --refresh-timelines"
+        )
+    frame = pd.read_csv(LYON_VORONEZH_TRAJECTORY, parse_dates=["timestamp"])
+    if frame[KEY].drop_duplicates().shape[0] != 135:
+        raise RuntimeError("Stored Lyon--Voronezh trajectory does not contain 135 identities")
+    return frame
+
+
+def draw_lyon_voronezh(ax: plt.Axes, time_ax: plt.Axes, refresh: bool) -> None:
+    data = load_lyon_voronezh(refresh)
+    endpoints = (
+        data.groupby(KEY + ["endpoint"], as_index=False)[["lat", "lon"]]
+        .median()
+    )
+    lyon = endpoints[endpoints.endpoint.eq("Lyon")].copy()
+    voronezh = endpoints[endpoints.endpoint.eq("Voronezh")].copy()
+    routes = lyon.merge(voronezh, on=KEY, suffixes=("_lyon", "_voronezh"))
+    lyon_airport = (5.07955, 45.72035)
+    voronezh_airport = (39.22502, 51.81275)
+    bbox = square_bbox(
+        np.r_[routes.lon_lyon, routes.lon_voronezh],
+        np.r_[routes.lat_lyon, routes.lat_voronezh],
+        padding=1.12,
+        minimum_km=2800,
+    )
+    setup_panel(ax, bbox, "Lyon → Voronezh")
+    for row in routes.itertuples(index=False):
+        ax.plot(
+            [row.lon_lyon, row.lon_voronezh],
+            [row.lat_lyon, row.lat_voronezh],
+            color=MUTED, linewidth=0.58, alpha=0.42, zorder=4,
+        )
+    ax.scatter(
+        routes.lon_lyon, routes.lat_lyon, s=6.0, color=BLUE,
+        alpha=0.50, edgecolor="white", linewidth=0.22, zorder=6,
+    )
+    ax.scatter(
+        routes.lon_voronezh, routes.lat_voronezh, s=5.0, color=RED,
+        alpha=0.40, edgecolor="white", linewidth=0.20, zorder=7,
+    )
+    ax.scatter(*lyon_airport, s=42, marker="*", color=BLUE,
+               edgecolor="white", linewidth=0.6, zorder=11)
+    ax.scatter(*voronezh_airport, s=46, marker="*", color=RED,
+               edgecolor="white", linewidth=0.65, zorder=11)
+    label_point(ax, lyon_airport, "Lyon airport", BLUE, offset=(4, 4))
+    label_point(ax, voronezh_airport, "Voronezh airport", RED,
+                offset=(-4, 4), align="right")
+    midpoint = (
+        (lyon_airport[0] + voronezh_airport[0]) / 2,
+        (lyon_airport[1] + voronezh_airport[1]) / 2,
+    )
+    ax.text(
+        midpoint[0], midpoint[1] + 1.1, "2,567 km",
+        ha="center", va="bottom", fontsize=4.7, color=INK,
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.82, "pad": 0.5},
+        zorder=12,
+    )
+    ax.text(
+        0.98, 0.025, "135 identities · 3 PLMNs",
+        transform=ax.transAxes, ha="right", va="bottom", fontsize=4.7, color=INK,
+        bbox={"facecolor": "white", "edgecolor": "#858b8e", "linewidth": 0.7,
+              "alpha": 0.93, "pad": 0.9}, zorder=14,
+    )
+    add_scale_bar(ax, bbox)
+
+    activity = data.assign(week=data.timestamp.dt.to_period("W-MON").dt.start_time)
+    weekly = (
+        activity[["week", "endpoint", *KEY]].drop_duplicates()
+        .groupby(["week", "endpoint"]).size().unstack(fill_value=0)
+        .reindex(columns=["Lyon", "Voronezh"], fill_value=0)
+    )
+    full_index = pd.date_range("2025-09-30", "2026-02-24", freq="W-TUE")
+    weekly = weekly.reindex(full_index)
+    for endpoint, color in (("Lyon", BLUE), ("Voronezh", RED)):
+        time_ax.plot(
+            weekly.index, weekly[endpoint], color=color, linewidth=1.05,
+            label=endpoint, zorder=3,
+        )
+    time_ax.grid(axis="y", color="#d7dbde", linewidth=0.42, zorder=0)
+    time_ax.set_title("Weekly endpoint activity", loc="left", fontsize=5.9,
+                      fontweight="bold", pad=2)
+    time_ax.set_ylabel("identities", labelpad=1.0)
+    time_ax.set_xlim(pd.Timestamp("2025-10-01"), pd.Timestamp("2026-02-28"))
+    time_ax.set_ylim(-2, 105)
+    locator = mdates.MonthLocator(interval=1)
+    time_ax.xaxis.set_major_locator(locator)
+    time_ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    time_ax.tick_params(length=2.0, width=0.5, pad=1.2)
+    time_ax.spines["top"].set_visible(False)
+    time_ax.spines["right"].set_visible(False)
+    time_ax.spines["left"].set_linewidth(0.55)
+    time_ax.spines["bottom"].set_linewidth(0.55)
+    time_ax.legend(
+        loc="upper right", ncol=1, frameon=False, fontsize=4.4,
+        handlelength=1.2, handletextpad=0.35,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -615,21 +771,22 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     configure()
-    fig = plt.figure(figsize=(7.15, 3.18))
+    fig = plt.figure(figsize=(7.15, 2.88))
     grid = fig.add_gridspec(
-        2, 4,
+        2, 5,
         left=0.046, right=0.994, top=0.84, bottom=0.13,
-        height_ratios=[1.0, 0.37], hspace=0.25, wspace=0.17,
+        height_ratios=[1.0, 0.40], hspace=0.25, wspace=0.20,
     )
-    map_axes = [fig.add_subplot(grid[0, index]) for index in range(4)]
-    time_axes = [fig.add_subplot(grid[1, index]) for index in range(4)]
+    map_axes = [fig.add_subplot(grid[0, index]) for index in range(5)]
+    time_axes = [fig.add_subplot(grid[1, index]) for index in range(5)]
     draw_queen_alia(map_axes[0], time_axes[0], args.refresh_timelines)
     draw_moscow(map_axes[1], time_axes[1], args.refresh_timelines)
     draw_vladimir(map_axes[2], time_axes[2])
     draw_islamabad(map_axes[3], time_axes[3])
+    draw_lyon_voronezh(map_axes[4], time_axes[4], args.refresh_timelines)
     legend = [
         Line2D([0], [0], marker="o", linestyle="none", markersize=4.5,
-               markerfacecolor=BLUE, markeredgecolor="white", label="Original cell estimate"),
+               markerfacecolor=BLUE, markeredgecolor="white", label="Earlier/original cell estimate"),
         Line2D([0], [0], color=MUTED, linewidth=1.1, label="Returned-position path"),
         Line2D([0], [0], marker="*", linestyle="none", markersize=7,
                markerfacecolor=RED, markeredgecolor="white", label="False-location target"),

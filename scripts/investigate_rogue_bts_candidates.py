@@ -260,7 +260,9 @@ def summarize(
 
 def als_samples(members: pd.DataFrame, phenomena: pd.DataFrame) -> pd.DataFrame:
     """Select three candidates and three nearby ordinary controls per survivor."""
-    survivors = ["FBS-01", "FBS-02", "FBS-05", "FBS-06", "FBS-07", "FBS-08"]
+    survivors = phenomena[
+        phenomena.fraction_lacs_294xx.lt(0.8) & phenomena.identities.ge(50)
+    ].phenomenon_id.tolist()
     by_plmn, by_mcc = load_plmn_countries()
     host_mccs: dict[str, set[int]] = {}
     for mcc, isos in by_mcc.items():
@@ -281,7 +283,8 @@ def als_samples(members: pd.DataFrame, phenomena: pd.DataFrame) -> pd.DataFrame:
         summary = phenomena[phenomena.phenomenon_id.eq(phenomenon)].iloc[0]
         host_iso = summary.host_country_iso
         mccs = set(host_mccs.get(host_iso, set()))
-        if phenomenon == "FBS-06":  # The point is in Syria despite the border polygon label.
+        if 36.7 < summary.center_latitude < 37.1 and 38.1 < summary.center_longitude < 38.6:
+            # Kobani is in Syria despite the border polygon/reverse-geocode label.
             mccs |= {417}
         if not mccs:
             continue
