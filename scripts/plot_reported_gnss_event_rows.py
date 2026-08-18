@@ -25,6 +25,7 @@ DATA = ROOT / "data/spoofing/news_validation"
 FIGS = ROOT / "paper/figs"
 WORLD = ROOT / "data/reference/ne_10m_admin_0_map_units.geojson"
 WEEKLY_DATA = DATA / "reported_event_weekly_activity.csv"
+POINT_DATA = DATA / "reported_event_endpoint_points.csv"
 CONTEXT_WEEKS_BEFORE = 12
 CONTEXT_WEEKS_AFTER = 52
 
@@ -51,7 +52,8 @@ STRONG = (
     ),
     EventPlot(
         "moscow_nov2024", "Moscow", "Sheremetyevo", "November 2024",
-        (("2024-11-20", "Moscow-region\ndrone alert"),),
+        (("2024-11-20", "Moscow-region\ndrone alert"),
+         ("2025-05-07", "Later May 2025\nepisode")),
     ),
     EventPlot(
         "moscow_may2025", "Moscow", "Sheremetyevo", "May 2025",
@@ -90,13 +92,14 @@ def configure() -> None:
     })
 
 
-def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     events = pd.read_csv(DATA / "known_gnss_events.csv", parse_dates=["screen_start", "screen_end"])
     candidates = pd.read_csv(DATA / "event_candidate_bins.csv", parse_dates=["onset_day"])
     weekly = pd.read_csv(
         WEEKLY_DATA, parse_dates=["week", "window_start", "window_end"],
     )
-    return events, candidates, weekly
+    points = pd.read_csv(POINT_DATA)
+    return events, candidates, weekly, points
 
 
 def event_row(events: pd.DataFrame, event_id: str) -> pd.Series:
@@ -115,6 +118,14 @@ def weighted_center(sources: pd.DataFrame) -> tuple[float, float]:
     )
 
 
+def weighted_point_center(points: pd.DataFrame) -> tuple[float, float]:
+    weights = points.observations.to_numpy(dtype=float)
+    return (
+        float(np.average(points.lon, weights=weights)),
+        float(np.average(points.lat, weights=weights)),
+    )
+
+
 def haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     p1, p2 = np.radians([lat1, lat2])
     dp = p2 - p1
@@ -123,9 +134,13 @@ def haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     return float(6371.0 * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a)))
 
 
-def refresh_weekly(events: pd.DataFrame, candidates: pd.DataFrame) -> pd.DataFrame:
+def refresh_weekly(
+    events: pd.DataFrame,
+    candidates: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Read-only refresh of weekly source/destination participation."""
     frames: list[pd.DataFrame] = []
+    point_frames: list[pd.DataFrame] = []
     for spec in (*STRONG, *ENDPOINT):
         event = event_row(events, spec.event_id)
         sources = significant_sources(candidates, spec.event_id)
@@ -191,10 +206,44 @@ def refresh_weekly(events: pd.DataFrame, candidates: pd.DataFrame) -> pd.DataFra
         frame["window_start"] = start
         frame["window_end"] = end
         frames.append(frame)
+        point_query = f"""
+        WITH
+          greatCircleDistance(lon,lat,{source_lon:.8f},{source_lat:.8f})/1000 AS source_km,
+          greatCircleDistance(lon,lat,{destination_lon:.8f},{destination_lat:.8f})/1000 AS destination_km,
+          if(destination_km < source_km, 'destination', 'source') AS endpoint
+        SELECT
+          endpoint, mcc, mnc, lac, cid, toString(cell_type) AS cell_type,
+          quantileExact(0.5)(lon) AS point_lon,
+          quantileExact(0.5)(lat) AS point_lat,
+          count() AS observations
+        FROM cell.geos
+        PREWHERE (mcc,mnc,lac,cid,toString(cell_type)) IN ({keys})
+        WHERE timestamp >= toDateTime('{start}')
+          AND timestamp < toDateTime('{end}')
+          AND lat BETWEEN -90 AND 90 AND lon BETWEEN -180 AND 180
+          AND NOT (abs(lat) <= 0.01 AND abs(lon) <= 0.01)
+          AND ((endpoint = 'source' AND source_km <= {source_radius:.3f})
+            OR (endpoint = 'destination' AND destination_km <= {destination_radius:.3f}))
+        GROUP BY endpoint, mcc, mnc, lac, cid, cell_type
+        ORDER BY endpoint, mcc, mnc, lac, cid, cell_type
+        """
+        point_frame = ch_df(
+            point_query,
+            settings={"max_threads": 6, "optimize_aggregation_in_order": 0},
+        )
+        if point_frame.empty:
+            raise RuntimeError(f"No endpoint points found for {spec.event_id}")
+        point_frame = point_frame.rename(
+            columns={"point_lon": "lon", "point_lat": "lat"},
+        )
+        point_frame.insert(0, "event_id", spec.event_id)
+        point_frames.append(point_frame)
         print(f"{spec.event_id}: {len(identities)} identities, {len(frame)} weekly rows", flush=True)
     result = pd.concat(frames, ignore_index=True)
     result.to_csv(WEEKLY_DATA, index=False)
-    return result
+    point_result = pd.concat(point_frames, ignore_index=True)
+    point_result.to_csv(POINT_DATA, index=False)
+    return result, point_result
 
 
 def square_map_bbox(
@@ -218,11 +267,19 @@ def square_map_bbox(
     )
 
 
-def draw_main_map(ax: plt.Axes, rings, spec: EventPlot, event: pd.Series, sources: pd.DataFrame) -> None:
-    destination = (float(event.known_dest_lon), float(event.known_dest_lat))
-    source = weighted_center(sources)
-    lons = np.r_[sources.source_lon.to_numpy(), destination[0]]
-    lats = np.r_[sources.source_lat.to_numpy(), destination[1]]
+def draw_main_map(
+    ax: plt.Axes,
+    rings,
+    spec: EventPlot,
+    sources: pd.DataFrame,
+    points: pd.DataFrame,
+) -> None:
+    source_points = points[points.endpoint.eq("source")]
+    destination_points = points[points.endpoint.eq("destination")]
+    source = weighted_point_center(source_points)
+    destination = weighted_point_center(destination_points)
+    lons = np.r_[source_points.lon.to_numpy(), destination_points.lon.to_numpy()]
+    lats = np.r_[source_points.lat.to_numpy(), destination_points.lat.to_numpy()]
     bbox = square_map_bbox(lons, lats)
     setup_map(ax, rings, bbox, equal=False)
     ax.add_patch(FancyArrowPatch(
@@ -231,13 +288,18 @@ def draw_main_map(ax: plt.Axes, rings, spec: EventPlot, event: pd.Series, source
         linewidth=1.15, alpha=0.88, zorder=4,
     ))
     ax.scatter(
-        sources.source_lon, sources.source_lat,
-        s=8 + 0.85 * np.sqrt(sources.n_onsets), color=BLUE,
+        source_points.lon, source_points.lat,
+        s=6.5, color=BLUE,
         edgecolor="white", linewidth=0.30, alpha=0.60, zorder=5,
     )
     ax.scatter(
         [source[0]], [source[1]], s=28, color=BLUE,
         edgecolor="white", linewidth=0.55, zorder=6,
+    )
+    ax.scatter(
+        destination_points.lon, destination_points.lat,
+        s=6.5, color=RED, edgecolor="white", linewidth=0.30,
+        alpha=0.55, zorder=5,
     )
     ax.scatter(
         [destination[0]], [destination[1]], s=34, marker="D", color=RED,
@@ -250,8 +312,8 @@ def draw_main_map(ax: plt.Axes, rings, spec: EventPlot, event: pd.Series, source
         zorder=8,
     )
     ax.annotate(
-        spec.destination_name, destination, xytext=(3, -8), textcoords="offset points",
-        fontsize=5.3, fontweight="bold", color=RED,
+        spec.destination_name, destination, xytext=(-3, -8), textcoords="offset points",
+        ha="right", fontsize=5.3, fontweight="bold", color=RED,
         bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.82, "pad": 0.5},
         zorder=8,
     )
@@ -316,8 +378,8 @@ def draw_detail(
     ax.set_facecolor("#e8edf0")
     add_osm_basemap(
         ax, bbox, zoom=detail_zoom(bbox), alpha=0.88,
-        grayscale=True, grayscale_brightness=1.08,
-        grayscale_contrast=1.02, source="carto_voyager",
+        grayscale=True, grayscale_brightness=0.98,
+        grayscale_contrast=1.25, source="carto_voyager",
     )
     ax.scatter(lons, lats, s=sizes, color=color, edgecolor="white", linewidth=0.4, zorder=6)
     ax.set_xlim(bbox[0], bbox[1])
@@ -380,10 +442,20 @@ def draw_activity(ax: plt.Axes, spec: EventPlot, activity: pd.DataFrame) -> None
             bbox={"facecolor": "white", "edgecolor": "#8f9599",
                   "linewidth": 0.75, "alpha": 0.95, "pad": 0.75}, zorder=7,
         )
+    cohort_size = int(sub.cohort_size.iloc[0])
+    if float(destination.tail(4).mean()) >= max(3.0, 0.10 * cohort_size):
+        ax.text(
+            0.985, 0.035,
+            "Destination activity continues\nthrough plotted window",
+            transform=ax.transAxes, ha="right", va="bottom",
+            fontsize=4.4, color=RED,
+            bbox={"facecolor": "white", "edgecolor": "#9a9fa2",
+                  "linewidth": 0.55, "alpha": 0.94, "pad": 0.8}, zorder=8,
+        )
 
 
 def make_figure(specs: tuple[EventPlot, ...], stem: str) -> None:
-    events, candidates, weekly = load_inputs()
+    events, candidates, weekly, points = load_inputs()
     rings = load_world(WORLD)
     fig = plt.figure(figsize=(7.15, 2.08 * len(specs) + 0.12))
     outer = fig.add_gridspec(
@@ -394,6 +466,7 @@ def make_figure(specs: tuple[EventPlot, ...], stem: str) -> None:
     for row_index, spec in enumerate(specs):
         event = event_row(events, spec.event_id)
         sources = significant_sources(candidates, spec.event_id)
+        event_points = points[points.event_id.eq(spec.event_id)].copy()
         row = outer[row_index, 0].subgridspec(1, 2, width_ratios=[1.08, 1.54], wspace=0.25)
         map_grid = row[0, 0].subgridspec(1, 2, width_ratios=[0.76, 0.32], wspace=0.045)
         ax_map = fig.add_subplot(map_grid[0, 0])
@@ -401,16 +474,18 @@ def make_figure(specs: tuple[EventPlot, ...], stem: str) -> None:
         ax_source = fig.add_subplot(detail_grid[0, 0])
         ax_destination = fig.add_subplot(detail_grid[1, 0])
         ax_activity = fig.add_subplot(row[0, 1])
-        draw_main_map(ax_map, rings, spec, event, sources)
+        draw_main_map(ax_map, rings, spec, sources, event_points)
+        source_points = event_points[event_points.endpoint.eq("source")]
+        destination_points = event_points[event_points.endpoint.eq("destination")]
         draw_detail(
             ax_source,
-            sources.source_lon.to_numpy(), sources.source_lat.to_numpy(),
-            "Source", BLUE, 9 + 1.0 * np.sqrt(sources.n_onsets.to_numpy()),
+            source_points.lon.to_numpy(), source_points.lat.to_numpy(),
+            "Source", BLUE, 7.5,
         )
         draw_detail(
             ax_destination,
-            np.array([float(event.known_dest_lon)]), np.array([float(event.known_dest_lat)]),
-            "Destination", RED, 28.0,
+            destination_points.lon.to_numpy(), destination_points.lat.to_numpy(),
+            "Destination", RED, 7.5,
         )
         draw_activity(ax_activity, spec, weekly)
     fig.text(
@@ -429,7 +504,7 @@ def main() -> None:
     parser.add_argument("--refresh", action="store_true", help="refresh weekly data from read-only ClickHouse")
     args = parser.parse_args()
     configure()
-    if args.refresh or not WEEKLY_DATA.exists():
+    if args.refresh or not WEEKLY_DATA.exists() or not POINT_DATA.exists():
         events = pd.read_csv(DATA / "known_gnss_events.csv", parse_dates=["screen_start", "screen_end"])
         candidates = pd.read_csv(DATA / "event_candidate_bins.csv", parse_dates=["onset_day"])
         refresh_weekly(events, candidates)
